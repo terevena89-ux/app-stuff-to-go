@@ -214,12 +214,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 /* ---------- Recherche ---------- */
-.recherche {
-  display: flex; align-items: center; gap: 6px; color: var(--discret);
-  padding: 0 10px; border-bottom: var(--trait) solid var(--encre);
+/* Bouton « ranger » du bandeau : devient un bloc « OK » inversé quand le mode est actif */
+.btn-ranger.actif {
+  background: var(--encre); color: var(--carte);
+  font: 700 13px var(--mono); padding: 6px 10px;
 }
-.recherche[hidden] { display: none; }
-.recherche input { flex: 1; border: 0; background: transparent; color: var(--encre); font: inherit; height: 40px; outline: none; }
 
 /* ---------- Checklist ---------- */
 .pastilles { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; border-bottom: var(--trait) solid var(--encre); }
@@ -253,6 +252,9 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .objet .nom { flex: 1; min-width: 0; }
 .objet .retirer { color: var(--pris); padding: 10px; }
+/* Ligne en mode « ranger » : poignée + icône + nom, rien d'autre */
+.objet-ranger { gap: 10px; padding: 7px 10px 7px 6px; min-height: 42px; }
+.ligne-ajout[hidden] { display: none; }
 .objet .retirer .ic { width: 16px; height: 16px; }
 /* Petite étiquette « Cette fois » sur les objets ajoutés juste pour cette sortie */
 .etiquette-ponctuel {

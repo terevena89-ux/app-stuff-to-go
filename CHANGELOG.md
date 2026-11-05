@@ -1,5 +1,10 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.5 — 2026-11-05
+- Mode « ranger » : bouton (flèches haut/bas) dans le bandeau de chaque écran. Les poignées n'apparaissent qu'en mode ranger ; le bouton devient « OK » pour sortir, et le mode se coupe en changeant d'écran.
+- Ranger aussi dans « Prêt à partir » : ordre et sac des objets juste pour cette sortie (effacés par « Tout décocher ») ; cases et croix cachées pendant qu'on range.
+- Accueil épuré : plus de compteur d'objets ni de recherche ; le crayon n'apparaît qu'en mode ranger.
+
 ## v0.4 — 2026-11-05
 - Pendant la préparation : une croix sur chaque objet le retire juste pour cette sortie (la liste d'origine ne change pas, « Annuler » possible).
 - « Ajouter pour cette sortie » : ajoute un objet en plus (avec suggestions), marqué « Cette fois ». Case « Garder aussi dans la liste » pour l'ajouter pour de bon à une des listes cochées.

@@ -25,7 +25,7 @@ import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplif
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.4";
+const VERSION = "v0.5";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -35,7 +35,8 @@ const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des f
 //   selection : les listes cochées sur l'accueil, dans l'ordre où je les ai cochées
 //   coches    : les objets déjà pris (par leur nom en minuscules)
 //   ponctuel  : changements « juste pour cette sortie », effacés par « Tout décocher »
-//               { ajouts: [objets en plus], retraits: [noms en minuscules des objets enlevés] }
+//               { ajouts: [objets en plus], retraits: [noms en minuscules des objets enlevés],
+//                 ordre: [noms dans l'ordre rangé], deplaces: [{ cle, sac }] (sac changé en rangeant) }
 // Les « icone » sont facultatives : sans choix de ma part, l'appli devine d'après le nom.
 let etat = etatVide();
 
@@ -44,7 +45,7 @@ function etatVide() {
     poches: { couleur: "jaune" },
     sacs: [{ id: "sac-a-dos", nom: "Sac à dos", couleur: "bleu" }],
     listes: [], selection: [], coches: [],
-    ponctuel: { ajouts: [], retraits: [] }
+    ponctuel: { ajouts: [], retraits: [], ordre: [], deplaces: [] }
   };
 }
 
@@ -60,7 +61,9 @@ function normaliser(d) {
     coches: Array.isArray(d.coches) ? d.coches : [],
     ponctuel: {
       ajouts: Array.isArray(d.ponctuel?.ajouts) ? d.ponctuel.ajouts : [],
-      retraits: Array.isArray(d.ponctuel?.retraits) ? d.ponctuel.retraits : []
+      retraits: Array.isArray(d.ponctuel?.retraits) ? d.ponctuel.retraits : [],
+      ordre: Array.isArray(d.ponctuel?.ordre) ? d.ponctuel.ordre : [],
+      deplaces: Array.isArray(d.ponctuel?.deplaces) ? d.ponctuel.deplaces : []
     }
   };
 }
@@ -199,6 +202,7 @@ function montrer(nom) {
 
 function router() {
   if (!MODE_DEMO && !refDoc) return; // pas encore connecté
+  majBoutonsRanger();
   const h = location.hash.slice(1);
   if (h === "prep") { afficherChecklist(); montrer("checklist"); }
   else if (h.startsWith("liste=")) {
@@ -213,6 +217,7 @@ function router() {
 window.addEventListener("hashchange", () => {
   grilleOuverte = null;
   choixNouvelleOuvert = false;
+  modeRanger = false;
   $("suggestions").innerHTML = "";
   $("suggestions-ponctuel").innerHTML = "";
   $("form-ponctuel").hidden = true;
@@ -230,6 +235,15 @@ function icone(nom, classe = "") {
 const caseACocher = () => `<span class="case">${icone("check")}</span>`;
 // Poignée (les petits points) : on l'attrape pour faire glisser la ligne
 const poignee = () => `<span class="poignee" aria-label="Déplacer">${icone("grip-vertical")}</span>`;
+// Mode « ranger » : les poignées n'apparaissent que quand on l'active (bouton du bandeau).
+// Il se désactive tout seul quand on change d'écran.
+let modeRanger = false;
+function majBoutonsRanger() {
+  document.querySelectorAll("[data-ranger]").forEach(b => {
+    b.classList.toggle("actif", modeRanger);
+    b.innerHTML = modeRanger ? "OK" : icone("arrows-sort");
+  });
+}
 // Menu « Partir de zéro / Copier une liste » ouvert ou non sur l'accueil
 let choixNouvelleOuvert = false;
 // Protège le texte tapé par l'utilisateur avant de l'afficher (évite qu'un « < » casse la page)
@@ -261,20 +275,20 @@ function bandeau(g, compteur) {
 
 // --- Écran 1 : accueil ---
 function afficherAccueil() {
-  const filtre = cle($("champ-recherche").value || "");
-  $("recherche-listes").hidden = etat.listes.length <= 6; // la recherche n'apparaît que si la liste devient longue
-  const listes = etat.listes.filter(l => !filtre || cle(l.nom).includes(filtre));
-
-  // Pendant une recherche, pas de poignée : l'ordre n'aurait pas de sens sur une liste filtrée
-  $("liste-listes").innerHTML = listes.length ? listes.map(l => {
+  // Accueil épuré : case + icône + nom. En mode « ranger » : poignée + icône + nom + crayon.
+  $("liste-listes").innerHTML = etat.listes.length ? etat.listes.map(l => {
     const choisie = etat.selection.includes(l.id);
-    return `<li class="ligne ligne-cliquable ${choisie ? "coche" : ""}" data-choisir="${l.id}">
-      ${filtre ? "" : poignee()}${caseACocher()}${icone(iconeListe(l))}
-      <span class="nom">${echapper(l.nom)}</span>
-      <span class="nb">${String(l.objets.length).padStart(2, "0")}</span>
-      <button class="btn-icone" data-modifier="${l.id}" aria-label="Modifier ${echapper(l.nom)}">${icone("pencil")}</button>
-    </li>`;
-  }).join("") : `<li class="vide">${etat.listes.length ? "Aucune liste trouvée." : "Crée ta première liste, par exemple « Travail » ou « Piscine »."}</li>`;
+    return modeRanger
+      ? `<li class="ligne" data-choisir="${l.id}">
+          ${poignee()}${icone(iconeListe(l))}
+          <span class="nom">${echapper(l.nom)}</span>
+          <button class="btn-icone" data-modifier="${l.id}" aria-label="Modifier ${echapper(l.nom)}">${icone("pencil")}</button>
+        </li>`
+      : `<li class="ligne ligne-cliquable ${choisie ? "coche" : ""}" data-choisir="${l.id}">
+          ${caseACocher()}${icone(iconeListe(l))}
+          <span class="nom">${echapper(l.nom)}</span>
+        </li>`;
+  }).join("") : `<li class="vide">Crée ta première liste, par exemple « Travail » ou « Piscine ».</li>`;
 
   // Petit menu sous « Nouvelle liste » : partir de zéro, ou copier une liste existante
   $("choix-nouvelle").innerHTML = choixNouvelleOuvert
@@ -312,7 +326,10 @@ function fusionner() {
     const k = cle(o.nom);
     if (!parCle.has(k)) parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o), ponctuel: true });
   });
-  return [...parCle.values()];
+  // Rangement fait en mode « ranger » pour cette sortie : changement de sac, puis ordre
+  etat.ponctuel.deplaces.forEach(d => { const o = parCle.get(d.cle); if (o) o.sac = d.sac; });
+  const rang = k => { const i = etat.ponctuel.ordre.indexOf(k); return i < 0 ? Infinity : i; };
+  return [...parCle.values()].sort((a, b) => rang(a.cle) - rang(b.cle));
 }
 
 function afficherChecklist() {
@@ -325,16 +342,18 @@ function afficherChecklist() {
   $("compteur").textContent = `${pris}/${objets.length}`;
   $("progression").style.width = objets.length ? `${Math.round(pris / objets.length * 100)}%` : "0";
 
+  $("btn-ajout-ponctuel").hidden = modeRanger;
+  const nomEtQte = o => `<span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
+    ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}`;
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
     bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
-    g.objets.map(o => `<div class="objet ${estPris(o) ? "coche" : ""}">
-        <button class="cocher" data-cocher="${echapper(o.cle)}">
-          ${caseACocher()}${icone(o.icone)}
-          <span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
-          ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}
-        </button>
-        <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
-      </div>`).join("")
+    g.objets.map(o => modeRanger
+      // Mode ranger : ni case ni croix (on ne coche pas par erreur en rangeant)
+      ? `<div class="objet objet-ranger" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}</div>`
+      : `<div class="objet ${estPris(o) ? "coche" : ""}">
+          <button class="cocher" data-cocher="${echapper(o.cle)}">${caseACocher()}${icone(o.icone)}${nomEtQte(o)}</button>
+          <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
+        </div>`).join("")
   ).join("")
     + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Ajoute un objet ci-dessous, ou avec le crayon sur l'accueil.</p>` : "")
     + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
@@ -365,7 +384,7 @@ function afficherEditionListe(l) {
     g.objets.map(o => {
       const ouvert = grilleOuverte === "objet:" + o.id;
       return `<div class="objet-edit" data-objet="${o.id}">
-        ${poignee()}
+        ${modeRanger ? poignee() : ""}
         <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="objet:${o.id}" aria-label="Changer l'icône">${icone(iconeObjet(o))}</button>
         <input class="e-nom" value="${echapper(o.nom)}" aria-label="Nom de l'objet">
         <select class="e-sac" aria-label="Contenant">${optionsContenants(o.sac)}</select>
@@ -395,7 +414,7 @@ function afficherReglages() {
     // Poches ne se déplace pas : à la place de la poignée, un espace vide de même largeur
     return `<div class="contenant" data-sac="${c.id}">
       <div class="ligne">
-        ${estPoches ? `<span class="poignee vide-poignee"></span>` : poignee()}
+        ${!modeRanger ? "" : estPoches ? `<span class="poignee vide-poignee"></span>` : poignee()}
         <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="sac:${c.id}" aria-label="Changer l'icône">${icone(iconeContenant(c))}</button>
         ${commandes}
       </div>
@@ -477,7 +496,8 @@ document.addEventListener("click", e => {
 
 // --- Accueil ---
 $("liste-listes").addEventListener("click", e => {
-  if (e.target.closest(".poignee")) return; // attraper la poignée ne coche pas la liste
+  // En mode ranger, toucher une ligne ne la coche pas (seuls la poignée et le crayon servent)
+  if (modeRanger && !e.target.closest("[data-modifier]")) return;
   const modif = e.target.closest("[data-modifier]");
   if (modif) { aller("liste=" + modif.dataset.modifier); return; }
   const ligne = e.target.closest("[data-choisir]");
@@ -488,7 +508,6 @@ $("liste-listes").addEventListener("click", e => {
   sauver();
   afficherAccueil();
 });
-$("champ-recherche").addEventListener("input", afficherAccueil);
 $("btn-preparer").addEventListener("click", () => aller("prep"));
 // Crée une liste (vide, ou copie d'une autre) et l'ouvre, nom prêt à être retapé
 function creerListe(modele) {
@@ -539,10 +558,10 @@ $("checklist").addEventListener("click", e => {
 // « Tout décocher » repart de zéro : coches ET changements « juste pour cette sortie »
 $("btn-tout-decocher").addEventListener("click", () => {
   const p = etat.ponctuel;
-  if (!etat.coches.length && !p.ajouts.length && !p.retraits.length) return;
+  if (!etat.coches.length && !p.ajouts.length && !p.retraits.length && !p.ordre.length && !p.deplaces.length) return;
   supprimerAvecAnnulation("Préparation remise à zéro", () => {
     etat.coches = [];
-    etat.ponctuel = { ajouts: [], retraits: [] };
+    etat.ponctuel = { ajouts: [], retraits: [], ordre: [], deplaces: [] };
   });
 });
 
@@ -825,6 +844,39 @@ rendreTriable($("objets-liste"), "[data-objet]", () => {
   sauver();
   afficherEditionListe(l);
 });
+
+// Prêt à partir : l'ordre et le sac des objets, JUSTE POUR CETTE SORTIE (les listes ne changent pas)
+rendreTriable($("checklist"), "[data-cle]", () => {
+  const actuels = new Map(fusionner().map(o => [o.cle, o]));
+  let sac = null;
+  const ordre = [];
+  for (const el of $("checklist").children) {
+    if (el.classList.contains("titre-section")) sac = el.dataset.sac;
+    else if (el.dataset.cle) {
+      const k = el.dataset.cle;
+      ordre.push(k);
+      const o = actuels.get(k);
+      // Glissé sous un autre bandeau : on note le nouveau sac pour cette sortie
+      if (o && sac && sac !== "?" && o.sac !== sac) {
+        etat.ponctuel.deplaces = etat.ponctuel.deplaces.filter(d => d.cle !== k);
+        etat.ponctuel.deplaces.push({ cle: k, sac });
+      }
+    }
+  }
+  etat.ponctuel.ordre = ordre;
+  sauver();
+  afficherChecklist();
+});
+
+// Bouton « ranger » du bandeau : active / désactive le mode sur l'écran en cours
+document.querySelectorAll("[data-ranger]").forEach(b => b.addEventListener("click", () => {
+  modeRanger = !modeRanger;
+  grilleOuverte = null;
+  // Le formulaire « Ajouter pour cette sortie » se cache pendant qu'on range
+  $("form-ponctuel").hidden = true;
+  $("btn-ajout-ponctuel").classList.remove("ouvert");
+  router();
+}));
 
 // Réglages : l'ordre des sacs (Poches reste toujours en premier)
 rendreTriable($("liste-sacs"), ".contenant", () => {

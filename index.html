@@ -35,12 +35,10 @@
   <header class="barre coul-jaune">
     <h1 class="titre">Où vas-tu ?</h1>
     <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
+    <!-- Mode « ranger » : fait apparaître poignées (et crayons sur l'accueil) -->
+    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
     <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
   </header>
-  <div id="recherche-listes" class="recherche" hidden>
-    <svg class="ic"><use href="icones/tabler.svg#search"></use></svg>
-    <input id="champ-recherche" type="search" placeholder="Chercher une liste">
-  </div>
   <ul id="liste-listes" class="lignes"></ul>
   <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Nouvelle liste</button>
   <div id="choix-nouvelle" class="choix-nouvelle"></div>
@@ -56,6 +54,7 @@
     <h1 class="titre">Prêt à partir</h1>
     <span id="compteur" class="compteur"></span>
     <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
+    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
   </header>
   <div class="progression"><span id="progression"></span></div>
   <div id="pastilles" class="pastilles"></div>
@@ -87,6 +86,7 @@
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <button id="icone-liste" class="choix-icone" aria-label="Changer l'icône de la liste"></button>
     <input id="nom-liste" class="titre-modifiable" aria-label="Nom de la liste">
+    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
     <button id="btn-suppr-liste" class="btn-icone" aria-label="Supprimer la liste"><svg class="ic"><use href="icones/tabler.svg#trash"></use></svg></button>
   </header>
   <div id="grille-liste"></div>
@@ -109,6 +109,7 @@
   <header class="barre coul-gris">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Réglages</h1>
+    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger les sacs"></button>
   </header>
 
   <h2 class="section"><span>Contenants</span><span id="nb-contenants"></span></h2>
