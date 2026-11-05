@@ -1,0 +1,214 @@
+/* =========================================================
+   Apparence de l'appli. Les couleurs sont des « variables »
+   (--fond, --texte...) : on les change à un seul endroit,
+   et le thème sombre ne fait que les redéfinir.
+   ========================================================= */
+
+:root {
+  --fond: #f6f7f8;
+  --carte: #ffffff;
+  --texte: #1c1e21;
+  --discret: #6b7078;
+  --trait: #dfe2e6;
+  --accent: #1f6f5c;       /* vert sapin, couleur de l'appli */
+  --accent-texte: #ffffff;
+  --accent-doux: #e2f1ec;
+  --danger: #b3261e;
+  --coche: #9aa0a6;        /* objets déjà pris (grisés) */
+  --rayon: 8px;
+  color-scheme: light dark;
+}
+
+/* Thème sombre automatique, selon le réglage du téléphone / PC */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --fond: #16181b;
+    --carte: #1f2226;
+    --texte: #e8eaed;
+    --discret: #9aa0a6;
+    --trait: #33373c;
+    --accent: #5cc2a4;
+    --accent-texte: #0e2a22;
+    --accent-doux: #1d3a32;
+    --danger: #f2b8b5;
+    --coche: #5f6368;
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--fond);
+  color: var(--texte);
+  font: 15px/1.35 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Chaque écran prend la largeur d'un téléphone, centré sur PC */
+.ecran {
+  max-width: 520px;
+  margin: 0 auto;
+  min-height: 100vh;
+  min-height: 100dvh;
+  padding: 0 12px calc(12px + env(safe-area-inset-bottom));
+  display: flex;
+  flex-direction: column;
+}
+.ecran[hidden] { display: none; }
+
+/* Icônes : trait fin, couleur du texte */
+.ic {
+  width: 20px; height: 20px;
+  fill: none; stroke: currentColor; stroke-width: 1.7;
+  stroke-linecap: round; stroke-linejoin: round;
+  flex-shrink: 0;
+}
+
+/* ---------- Barre du haut ---------- */
+.barre {
+  display: flex; align-items: center; gap: 4px;
+  padding: calc(8px + env(safe-area-inset-top)) 0 6px;
+  position: sticky; top: 0; background: var(--fond); z-index: 2;
+}
+.titre { flex: 1; margin: 0; font-size: 18px; font-weight: 600; }
+.titre-modifiable {
+  flex: 1; min-width: 0; font: inherit; font-size: 18px; font-weight: 600;
+  background: transparent; color: var(--texte);
+  border: 0; border-bottom: 1px dashed var(--trait); padding: 4px 2px;
+}
+.titre-modifiable:focus { outline: none; border-bottom-color: var(--accent); }
+.compteur { color: var(--discret); font-size: 13px; padding: 0 4px; }
+.synchro { color: var(--discret); display: flex; padding: 0 4px; }
+.synchro.ok { color: var(--accent); }
+.synchro.off { color: var(--danger); }
+
+/* ---------- Boutons ---------- */
+button { font: inherit; color: inherit; cursor: pointer; }
+.btn-icone {
+  background: none; border: 0; padding: 8px; border-radius: var(--rayon);
+  display: flex; color: var(--texte);
+}
+.btn-icone:active { background: var(--trait); }
+.btn-icone:disabled { opacity: .3; cursor: default; }
+.s-nom { border-color: transparent; background: transparent; padding: 0 4px; }
+.btn, .btn-principal {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 40px; padding: 0 14px; border-radius: var(--rayon);
+  border: 1px solid var(--trait); background: var(--carte);
+}
+.btn-principal { background: var(--accent); color: var(--accent-texte); border-color: var(--accent); font-weight: 600; }
+.btn-principal:disabled { opacity: .45; cursor: default; }
+.btn:active, .btn-principal:active { transform: scale(.98); }
+.large { width: 100%; }
+
+/* Barre du bas, collée en bas de l'écran */
+.pied {
+  margin-top: auto; padding-top: 10px;
+  position: sticky; bottom: 0; background: var(--fond);
+  padding-bottom: calc(4px + env(safe-area-inset-bottom));
+}
+
+/* ---------- Lignes de liste (accueil, sacs) ---------- */
+.lignes { list-style: none; margin: 0; padding: 0; }
+.ligne {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 2px; border-bottom: 1px solid var(--trait);
+}
+.ligne .nom { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ligne .nb { color: var(--discret); font-size: 13px; }
+.ligne.choisie .ic-case { color: var(--accent); }
+.ligne-cliquable { cursor: pointer; }
+.ligne-ajout {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 10px 2px; background: none; border: 0; color: var(--discret); text-align: left;
+}
+.vide { color: var(--discret); text-align: center; padding: 24px 8px; }
+
+/* ---------- Recherche ---------- */
+.recherche {
+  display: flex; align-items: center; gap: 6px; color: var(--discret);
+  border: 1px solid var(--trait); border-radius: var(--rayon);
+  padding: 0 8px; margin: 2px 0 6px; background: var(--carte);
+}
+.recherche[hidden] { display: none; }
+.recherche input { flex: 1; border: 0; background: transparent; color: var(--texte); font: inherit; height: 36px; outline: none; }
+
+/* ---------- Checklist ---------- */
+.pastilles { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 2px; }
+.pastille { font-size: 12px; padding: 2px 9px; border-radius: 12px; background: var(--accent-doux); color: var(--accent); }
+.titre-section {
+  display: flex; align-items: center; gap: 6px;
+  margin: 12px 0 0; padding-bottom: 3px;
+  font-size: 12px; font-weight: 600; color: var(--discret);
+  text-transform: uppercase; letter-spacing: .04em;
+  border-bottom: 1px solid var(--trait);
+}
+.titre-section .ic { width: 16px; height: 16px; }
+.objet {
+  display: flex; align-items: center; gap: 8px; width: 100%;
+  padding: 7px 2px; background: none; border: 0; text-align: left;
+  border-bottom: 1px solid var(--trait);
+}
+.objet .nom { flex: 1; min-width: 0; }
+.qte { color: var(--discret); font-size: 13px; }
+.objet.pris { color: var(--coche); }
+.objet.pris .nom { text-decoration: line-through; }
+.objet.pris .ic-case { color: var(--coche); }
+.objet:not(.pris) .ic-case { color: var(--discret); }
+.bravo { text-align: center; color: var(--accent); font-weight: 600; padding: 14px 0 4px; }
+
+/* ---------- Modifier une liste ---------- */
+.objet-edit {
+  display: flex; align-items: center; gap: 6px;
+  padding: 4px 0; border-bottom: 1px solid var(--trait);
+}
+/* Champs discrets (sans cadre) pour rester compact ; le cadre apparaît quand on touche */
+.objet-edit input, .objet-edit select { height: 34px; border-color: transparent; background: transparent; padding: 0 4px; }
+.objet-edit select { color: var(--discret); font-size: 13px; }
+.objet-edit .e-nom { flex: 1; min-width: 0; }
+.objet-edit .e-sac { width: 110px; }
+.objet-edit .e-qte { width: 46px; }
+.form-ajout {
+  margin-top: auto; padding: 10px 0 calc(4px + env(safe-area-inset-bottom));
+  position: sticky; bottom: 0; background: var(--fond);
+  display: flex; flex-direction: column; gap: 6px;
+  border-top: 1px solid var(--trait);
+}
+.form-ligne { display: flex; gap: 6px; align-items: center; }
+.form-ligne select, .form-ligne input:not([type=number]) { flex: 1; min-width: 0; }
+.form-ligne input[type=number] { width: 60px; }
+
+input, select {
+  font: inherit; color: var(--texte); background: var(--carte);
+  border: 1px solid var(--trait); border-radius: var(--rayon);
+  height: 40px; padding: 0 8px; min-width: 0;
+}
+input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+input[type=number] { -moz-appearance: textfield; }
+
+/* ---------- Réglages ---------- */
+.section { font-size: 14px; margin: 18px 0 4px; }
+.aide { color: var(--discret); font-size: 13px; margin: 0 0 6px; }
+.boutons { display: flex; gap: 8px; flex-wrap: wrap; }
+.version { margin-top: auto; padding: 24px 0 8px; text-align: center; color: var(--discret); font-size: 12px; }
+#form-sac { margin-top: 8px; }
+
+/* ---------- Connexion ---------- */
+.connexion { margin: auto; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 24px; }
+.connexion h1 { margin: 0; font-size: 22px; }
+.discret { color: var(--discret); margin: 0 0 8px; }
+.erreur { color: var(--danger); font-size: 13px; }
+
+/* ---------- Petit message « Annuler » ---------- */
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(70px + env(safe-area-inset-bottom));
+  display: flex; align-items: center; gap: 14px;
+  background: var(--texte); color: var(--fond);
+  padding: 10px 14px; border-radius: var(--rayon);
+  font-size: 14px; z-index: 10; max-width: calc(100% - 24px);
+}
+.toast[hidden] { display: none; }
+.toast button { background: none; border: 0; color: var(--accent-doux); font-weight: 700; padding: 0; }
+@media (prefers-color-scheme: dark) { .toast button { color: var(--accent-texte); } .toast { background: var(--accent); color: var(--accent-texte); } }

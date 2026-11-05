@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Icône : un sac avec une coche, sur fond vert sapin -->
+  <rect width="64" height="64" rx="14" fill="#1f6f5c"/>
+  <g fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M18 28a14 14 0 0 1 28 0v20H18z"/>
+    <path d="M26 19v-3a6 6 0 0 1 12 0v3"/>
+    <path d="M25 37l5 5 9-9"/>
+  </g>
+</svg>
