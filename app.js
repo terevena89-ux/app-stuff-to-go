@@ -25,7 +25,7 @@ import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplif
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.3.1";
+const VERSION = "v0.3.2";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -655,15 +655,19 @@ $("suggestions").addEventListener("click", e => {
 // On attrape une ligne par sa poignée, on la promène, on lâche : l'appli relit
 // l'ordre des lignes à l'écran et l'enregistre (fonction « auLacher »).
 // Marche au doigt comme à la souris (« pointer » = doigt, souris ou stylet).
+// On écoute le doigt sur TOUTE la page (document) : quand l'appli déplace la ligne
+// pendant le glisser, le navigateur « perd » la poignée, mais la page, elle, reste là.
 function rendreTriable(conteneur, selecteur, auLacher) {
   conteneur.addEventListener("pointerdown", e => {
     const prise = e.target.closest(".poignee");
     const ligne = prise && !prise.classList.contains("vide-poignee") && prise.closest(selecteur);
     if (!ligne) return;
     e.preventDefault();
-    try { prise.setPointerCapture(e.pointerId); } catch (err) { /* rare : pointeur déjà relâché */ } // la poignée reçoit les mouvements même hors d'elle
+    const doigt = e.pointerId; // on ne suit que ce doigt-là (si un 2e doigt touche l'écran)
     ligne.classList.add("glisse");
     const bouger = ev => {
+      if (ev.pointerId !== doigt) return;
+      ev.preventDefault();
       // Défilement automatique près des bords de l'écran
       if (ev.clientY < 80) window.scrollBy(0, -14);
       else if (ev.clientY > innerHeight - 80) window.scrollBy(0, 14);
@@ -675,16 +679,17 @@ function rendreTriable(conteneur, selecteur, auLacher) {
       const apres = cible.classList.contains("titre-section") || ev.clientY > r.top + r.height / 2;
       if (apres) cible.after(ligne); else cible.before(ligne);
     };
-    const lacher = () => {
-      prise.removeEventListener("pointermove", bouger);
-      prise.removeEventListener("pointerup", lacher);
-      prise.removeEventListener("pointercancel", lacher);
+    const lacher = ev => {
+      if (ev.pointerId !== doigt) return;
+      document.removeEventListener("pointermove", bouger);
+      document.removeEventListener("pointerup", lacher);
+      document.removeEventListener("pointercancel", lacher);
       ligne.classList.remove("glisse");
       auLacher();
     };
-    prise.addEventListener("pointermove", bouger);
-    prise.addEventListener("pointerup", lacher);
-    prise.addEventListener("pointercancel", lacher);
+    document.addEventListener("pointermove", bouger, { passive: false });
+    document.addEventListener("pointerup", lacher);
+    document.addEventListener("pointercancel", lacher);
   });
 }
 

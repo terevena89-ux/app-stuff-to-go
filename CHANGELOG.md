@@ -1,5 +1,8 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.3.2 — 2026-11-05
+- Correction : le glisser pour réordonner restait bloqué après une case (le navigateur « perdait » le doigt quand la ligne bougeait). Le doigt est maintenant suivi sur toute la page.
+
 ## v0.3.1 — 2026-11-05
 - Correction : l'appli installée sur le téléphone pouvait garder l'ancienne version (GitHub laisse les fichiers 10 min en mémoire). Le gardien revérifie maintenant toujours auprès du serveur.
 - Mise à jour automatique : vérification à chaque retour sur l'appli, et rechargement tout seul quand une nouvelle version arrive.
