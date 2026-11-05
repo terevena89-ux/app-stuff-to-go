@@ -25,7 +25,7 @@ import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplif
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.3.2";
+const VERSION = "v0.4";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -34,6 +34,8 @@ const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des f
 //   listes    : mes listes par endroit                    [{ id, nom, icone, objets: [{ id, nom, qte, sac, icone }] }]
 //   selection : les listes cochées sur l'accueil, dans l'ordre où je les ai cochées
 //   coches    : les objets déjà pris (par leur nom en minuscules)
+//   ponctuel  : changements « juste pour cette sortie », effacés par « Tout décocher »
+//               { ajouts: [objets en plus], retraits: [noms en minuscules des objets enlevés] }
 // Les « icone » sont facultatives : sans choix de ma part, l'appli devine d'après le nom.
 let etat = etatVide();
 
@@ -41,7 +43,8 @@ function etatVide() {
   return {
     poches: { couleur: "jaune" },
     sacs: [{ id: "sac-a-dos", nom: "Sac à dos", couleur: "bleu" }],
-    listes: [], selection: [], coches: []
+    listes: [], selection: [], coches: [],
+    ponctuel: { ajouts: [], retraits: [] }
   };
 }
 
@@ -54,7 +57,11 @@ function normaliser(d) {
     sacs: sacs.map((s, i) => ({ ...s, couleur: s.couleur || COULEURS[(i + 1) % COULEURS.length] })),
     listes: Array.isArray(d.listes) ? d.listes.map(l => ({ ...l, objets: Array.isArray(l.objets) ? l.objets : [] })) : [],
     selection: Array.isArray(d.selection) ? d.selection : [],
-    coches: Array.isArray(d.coches) ? d.coches : []
+    coches: Array.isArray(d.coches) ? d.coches : [],
+    ponctuel: {
+      ajouts: Array.isArray(d.ponctuel?.ajouts) ? d.ponctuel.ajouts : [],
+      retraits: Array.isArray(d.ponctuel?.retraits) ? d.ponctuel.retraits : []
+    }
   };
 }
 
@@ -207,6 +214,9 @@ window.addEventListener("hashchange", () => {
   grilleOuverte = null;
   choixNouvelleOuvert = false;
   $("suggestions").innerHTML = "";
+  $("suggestions-ponctuel").innerHTML = "";
+  $("form-ponctuel").hidden = true;
+  $("btn-ajout-ponctuel").classList.remove("ouvert");
   router();
 });
 
@@ -283,6 +293,8 @@ function afficherAccueil() {
 // Rassemble les objets des listes cochées. Si un objet est dans plusieurs listes,
 // il n'apparaît qu'une fois : son contenant et son icône viennent de la première
 // liste cochée, et on garde la plus grande quantité.
+// Ensuite on applique les changements « juste pour cette sortie » : on enlève les
+// objets retirés, et on ajoute les objets en plus (marqués « ponctuel »).
 function fusionner() {
   const parCle = new Map();
   for (const id of etat.selection) {
@@ -295,6 +307,11 @@ function fusionner() {
       else parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o) });
     }
   }
+  etat.ponctuel.retraits.forEach(k => parCle.delete(k));
+  etat.ponctuel.ajouts.forEach(o => {
+    const k = cle(o.nom);
+    if (!parCle.has(k)) parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o), ponctuel: true });
+  });
   return [...parCle.values()];
 }
 
@@ -310,12 +327,16 @@ function afficherChecklist() {
 
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
     bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
-    g.objets.map(o => `<button class="objet ${estPris(o) ? "coche" : ""}" data-cocher="${echapper(o.cle)}">
-        ${caseACocher()}${icone(o.icone)}
-        <span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
-      </button>`).join("")
+    g.objets.map(o => `<div class="objet ${estPris(o) ? "coche" : ""}">
+        <button class="cocher" data-cocher="${echapper(o.cle)}">
+          ${caseACocher()}${icone(o.icone)}
+          <span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
+          ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}
+        </button>
+        <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
+      </div>`).join("")
   ).join("")
-    + (objets.length === 0 ? `<p class="vide">Ces listes sont vides. Ajoute des objets avec le crayon sur l'accueil.</p>` : "")
+    + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Ajoute un objet ci-dessous, ou avec le crayon sur l'accueil.</p>` : "")
     + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
 }
 
@@ -495,6 +516,19 @@ $("choix-nouvelle").addEventListener("click", e => {
 
 // --- Checklist ---
 $("checklist").addEventListener("click", e => {
+  // Croix : retirer l'objet juste pour cette sortie (la liste d'origine ne change pas)
+  const r = e.target.closest("[data-retirer]");
+  if (r) {
+    const k = r.dataset.retirer;
+    const o = fusionner().find(x => x.cle === k);
+    if (!o) return;
+    supprimerAvecAnnulation(`« ${o.nom} » retiré pour cette sortie`, () => {
+      if (o.ponctuel) etat.ponctuel.ajouts = etat.ponctuel.ajouts.filter(x => cle(x.nom) !== k);
+      else etat.ponctuel.retraits.push(k);
+      etat.coches = etat.coches.filter(x => x !== k);
+    });
+    return;
+  }
   const b = e.target.closest("[data-cocher]");
   if (!b) return;
   const k = b.dataset.cocher;
@@ -502,9 +536,55 @@ $("checklist").addEventListener("click", e => {
   sauver();
   afficherChecklist();
 });
+// « Tout décocher » repart de zéro : coches ET changements « juste pour cette sortie »
 $("btn-tout-decocher").addEventListener("click", () => {
-  if (!etat.coches.length) return;
-  supprimerAvecAnnulation("Tout est décoché", () => { etat.coches = []; });
+  const p = etat.ponctuel;
+  if (!etat.coches.length && !p.ajouts.length && !p.retraits.length) return;
+  supprimerAvecAnnulation("Préparation remise à zéro", () => {
+    etat.coches = [];
+    etat.ponctuel = { ajouts: [], retraits: [] };
+  });
+});
+
+// --- Ajouter un objet pendant la préparation ---
+// Par défaut juste pour cette sortie ; case à cocher pour l'ajouter aussi à une des listes.
+$("btn-ajout-ponctuel").addEventListener("click", () => {
+  const form = $("form-ponctuel");
+  form.hidden = !form.hidden;
+  $("btn-ajout-ponctuel").classList.toggle("ouvert", !form.hidden);
+  if (form.hidden) return;
+  const sel = $("ponctuel-sac");
+  sel.innerHTML = optionsContenants(sel.value || "poches");
+  const listes = etat.selection.map(id => etat.listes.find(l => l.id === id)).filter(Boolean);
+  $("ponctuel-liste").innerHTML = listes.map(l => `<option value="${l.id}">${echapper(l.nom)}</option>`).join("");
+  $("ponctuel-garder").checked = false;
+  $("ponctuel-nom").focus();
+});
+
+function ajouterPonctuel(obj) {
+  const k = cle(obj.nom);
+  if (fusionner().some(o => o.cle === k)) { afficherToast(`« ${obj.nom} » est déjà dans la liste`, null); return; }
+  etat.ponctuel.retraits = etat.ponctuel.retraits.filter(x => x !== k); // s'il avait été retiré, il revient
+  const garder = $("ponctuel-garder").checked && etat.listes.find(l => l.id === $("ponctuel-liste").value);
+  if (garder) {
+    if (!garder.objets.some(o => cle(o.nom) === k)) garder.objets.push({ ...obj, id: nouvelId() });
+  } else {
+    etat.ponctuel.ajouts.push({ ...obj, id: nouvelId() });
+  }
+  sauver();
+  $("ponctuel-nom").value = "";
+  $("ponctuel-qte").value = "";
+  afficherSuggestionsPonctuel();
+  afficherChecklist();
+  afficherToast(garder ? `« ${obj.nom} » ajouté, et gardé dans « ${garder.nom} »` : `« ${obj.nom} » ajouté pour cette sortie`, null);
+  $("ponctuel-nom").focus();
+}
+$("form-ponctuel").addEventListener("submit", e => {
+  e.preventDefault();
+  const nom = $("ponctuel-nom").value.trim();
+  if (!nom) return;
+  const qte = parseInt($("ponctuel-qte").value, 10);
+  ajouterPonctuel({ nom, qte: qte > 1 ? qte : 1, sac: $("ponctuel-sac").value });
 });
 
 // --- Modifier une liste ---
@@ -607,10 +687,10 @@ $("liste-sacs").addEventListener("click", e => {
 // --- Suggestions pendant la saisie d'un objet ---
 // Propose les objets déjà présents dans mes autres listes (sans accents ni majuscules :
 // « gou » trouve « Gourde »). En choisir un l'ajoute avec son contenant et son icône.
-function suggestions(texte) {
+// « deja » = les noms (en minuscules) à ne pas proposer, car déjà présents.
+function suggestions(texte, deja) {
   const q = simplifier(texte.trim());
-  if (!q || !listeEnCours) return [];
-  const deja = new Set(listeEnCours.objets.map(o => cle(o.nom)));
+  if (!q) return [];
   const vus = new Map();
   etat.listes.forEach(l => l.objets.forEach(o => {
     const k = cle(o.nom);
@@ -621,17 +701,40 @@ function suggestions(texte) {
     .sort((a, b) => simplifier(b.nom).startsWith(q) - simplifier(a.nom).startsWith(q))
     .slice(0, 5);
 }
-function afficherSuggestions() {
-  const liste = suggestions($("objet-nom").value);
-  $("suggestions").innerHTML = liste.map((o, i) => {
+// Boutons de suggestions : icône, nom, et étiquette colorée du contenant
+function htmlSuggestions(liste) {
+  return liste.map((o, i) => {
     const c = contenants().find(x => x.id === o.sac) || SANS_SAC;
     return `<button type="button" class="suggestion" data-suggestion="${i}">
       ${icone(iconeObjet(o))}<span class="nom">${echapper(o.nom)}</span>
       <span class="etiquette coul-${c.couleur}">${echapper(c.nom)}</span></button>`;
   }).join("");
-  suggestionsAffichees = liste;
+}
+// Écran Modifier : on ne propose pas ce qui est déjà dans la liste
+function afficherSuggestions() {
+  suggestionsAffichees = listeEnCours
+    ? suggestions($("objet-nom").value, new Set(listeEnCours.objets.map(o => cle(o.nom))))
+    : [];
+  $("suggestions").innerHTML = htmlSuggestions(suggestionsAffichees);
 }
 let suggestionsAffichees = [];
+// Checklist : on ne propose pas ce qui est déjà à prendre
+let suggestionsPonctuel = [];
+function afficherSuggestionsPonctuel() {
+  suggestionsPonctuel = suggestions($("ponctuel-nom").value, new Set(fusionner().map(o => o.cle)));
+  $("suggestions-ponctuel").innerHTML = htmlSuggestions(suggestionsPonctuel);
+}
+$("ponctuel-nom").addEventListener("input", afficherSuggestionsPonctuel);
+$("suggestions-ponctuel").addEventListener("click", e => {
+  const b = e.target.closest("[data-suggestion]");
+  const modele = b && suggestionsPonctuel[+b.dataset.suggestion];
+  if (!modele) return;
+  const sac = contenants().some(c => c.id === modele.sac) ? modele.sac : $("ponctuel-sac").value;
+  const qteTapee = parseInt($("ponctuel-qte").value, 10);
+  const obj = { nom: modele.nom, qte: qteTapee > 1 ? qteTapee : (modele.qte || 1), sac };
+  if (modele.icone) obj.icone = modele.icone;
+  ajouterPonctuel(obj);
+});
 $("objet-nom").addEventListener("input", afficherSuggestions);
 $("suggestions").addEventListener("click", e => {
   const b = e.target.closest("[data-suggestion]");

@@ -101,18 +101,23 @@ html, body {
   display: flex; align-items: center; gap: 6px;
   padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
   border-bottom: var(--trait) solid var(--encre);
-  position: sticky; top: 0; background: var(--carte); z-index: 3;
+  position: sticky; top: 0; z-index: 3;
+  /* Une couleur par écran (classe coul-... dans index.html) : on sait où on est d'un coup d'œil */
+  background: var(--cf, var(--carte)); color: var(--ct, var(--encre));
 }
+.barre .btn-icone, .barre .choix-icone { color: inherit; }
 .titre { flex: 1; margin: 0; font-size: 19px; font-weight: 700; letter-spacing: -.01em; }
 .titre-modifiable {
-  flex: 1; min-width: 0; font: 700 19px var(--texte); color: var(--encre);
-  background: transparent; border: 0; border-bottom: 2px dashed var(--fin); padding: 2px 0;
+  flex: 1; min-width: 0; font: 700 19px var(--texte); color: inherit;
+  background: transparent; border: 0; border-bottom: 2px dashed currentColor; padding: 2px 0;
 }
-.titre-modifiable:focus { outline: none; border-bottom-color: var(--encre); }
+.titre-modifiable:focus { outline: none; border-bottom-style: solid; }
 .compteur { font: 700 15px var(--mono); }
-.synchro { color: var(--discret); display: flex; }
-.synchro.attente { color: var(--encre); }
-.synchro.off { color: var(--danger); }
+/* Indicateur de synchro : discret (à moitié transparent) quand tout va bien */
+.synchro { display: flex; opacity: .55; }
+.synchro.attente { opacity: 1; }
+.synchro.off { opacity: 1; }
+.synchro.off .ic { stroke-width: 2.4; }
 
 /* Barre de progression (checklist) */
 .progression { height: 10px; background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
@@ -238,12 +243,22 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .titre-section .ic { width: 17px; height: 17px; stroke-width: 2; }
 * + .titre-section { border-top: var(--trait) solid var(--encre); }
 
-.objet {
-  display: flex; align-items: center; gap: 10px; width: 100%;
-  padding: 7px 10px; min-height: 42px;
-  background: none; border: 0; border-bottom: 1px solid var(--fin); text-align: left;
+/* Une ligne d'objet = une grande zone à toucher pour cocher + une croix pour retirer */
+.objet { display: flex; align-items: center; border-bottom: 1px solid var(--fin); }
+.objet .cocher {
+  flex: 1; min-width: 0;
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 4px 7px 10px; min-height: 42px;
+  background: none; border: 0; text-align: left;
 }
 .objet .nom { flex: 1; min-width: 0; }
+.objet .retirer { color: var(--pris); padding: 10px; }
+.objet .retirer .ic { width: 16px; height: 16px; }
+/* Petite étiquette « Cette fois » sur les objets ajoutés juste pour cette sortie */
+.etiquette-ponctuel {
+  font: 700 10px var(--mono); text-transform: uppercase; white-space: nowrap;
+  padding: 1px 5px; border: 1.5px dashed currentColor;
+}
 .qte { font: 700 12px var(--mono); color: var(--discret); }
 .objet.coche { color: var(--pris); }
 .objet.coche .nom { text-decoration: line-through; }
@@ -282,6 +297,13 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex; flex-direction: column; gap: 8px;
   border-top: var(--trait) solid var(--encre);
 }
+.form-ajout[hidden] { display: none; }
+/* Dans la checklist, le formulaire reste à sa place (c'est le bouton du bas qui est collé) */
+.form-ponctuel { margin-top: 0; position: static; background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
+#btn-ajout-ponctuel.ouvert { color: var(--encre); font-weight: 700; }
+.option-liste { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--discret); }
+.option-liste input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--encre); flex-shrink: 0; }
+.option-liste select { flex: 1; min-width: 0; height: 34px; font-size: 13px; }
 .form-ligne { display: flex; gap: 8px; align-items: center; }
 .form-ligne select, .form-ligne input:not([type=number]) { flex: 1; min-width: 0; }
 .form-ligne input[type=number] { width: 60px; font-family: var(--mono); }

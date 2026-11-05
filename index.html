@@ -32,7 +32,7 @@
 
 <!-- ============ ÉCRAN 1 : ACCUEIL (choix des listes) ============ -->
 <section id="ecran-accueil" class="ecran" hidden>
-  <header class="barre">
+  <header class="barre coul-jaune">
     <h1 class="titre">Où vas-tu ?</h1>
     <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
     <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
@@ -51,7 +51,7 @@
 
 <!-- ============ ÉCRAN 2 : CHECKLIST (listes fusionnées) ============ -->
 <section id="ecran-checklist" class="ecran" hidden>
-  <header class="barre">
+  <header class="barre coul-bleu">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Prêt à partir</h1>
     <span id="compteur" class="compteur"></span>
@@ -60,6 +60,22 @@
   <div class="progression"><span id="progression"></span></div>
   <div id="pastilles" class="pastilles"></div>
   <div id="checklist"></div>
+  <!-- Ajouter un objet pendant la préparation (juste cette fois, ou aussi dans une liste) -->
+  <button id="btn-ajout-ponctuel" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Ajouter pour cette sortie</button>
+  <form id="form-ponctuel" class="form-ajout form-ponctuel" autocomplete="off" hidden>
+    <div id="suggestions-ponctuel" class="suggestions"></div>
+    <input id="ponctuel-nom" placeholder="Objet (ou cherche dans tes listes)" required>
+    <div class="form-ligne">
+      <select id="ponctuel-sac" aria-label="Contenant"></select>
+      <input id="ponctuel-qte" type="number" min="1" max="99" placeholder="Qté" aria-label="Quantité">
+      <button class="btn-principal coul-bleu" aria-label="Ajouter"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
+    </div>
+    <label class="option-liste">
+      <input id="ponctuel-garder" type="checkbox">
+      <span>Garder aussi dans la liste</span>
+      <select id="ponctuel-liste" aria-label="Liste où garder l'objet"></select>
+    </label>
+  </form>
   <div class="pied">
     <button id="btn-tout-decocher" class="btn large"><svg class="ic"><use href="icones/tabler.svg#refresh"></use></svg>Tout décocher</button>
   </div>
@@ -67,7 +83,7 @@
 
 <!-- ============ ÉCRAN 3 : MODIFIER UNE LISTE ============ -->
 <section id="ecran-liste" class="ecran" hidden>
-  <header class="barre">
+  <header class="barre coul-vert">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <button id="icone-liste" class="choix-icone" aria-label="Changer l'icône de la liste"></button>
     <input id="nom-liste" class="titre-modifiable" aria-label="Nom de la liste">
@@ -90,7 +106,7 @@
 
 <!-- ============ ÉCRAN 4 : RÉGLAGES ============ -->
 <section id="ecran-reglages" class="ecran" hidden>
-  <header class="barre">
+  <header class="barre coul-gris">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Réglages</h1>
   </header>

@@ -1,5 +1,11 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.4 — 2026-11-05
+- Pendant la préparation : une croix sur chaque objet le retire juste pour cette sortie (la liste d'origine ne change pas, « Annuler » possible).
+- « Ajouter pour cette sortie » : ajoute un objet en plus (avec suggestions), marqué « Cette fois ». Case « Garder aussi dans la liste » pour l'ajouter pour de bon à une des listes cochées.
+- « Tout décocher » remet toute la préparation à zéro (coches, ajouts et retraits).
+- Bandeau du haut coloré selon l'écran : accueil jaune, checklist bleu, modifier vert, réglages gris.
+
 ## v0.3.2 — 2026-11-05
 - Correction : le glisser pour réordonner restait bloqué après une case (le navigateur « perdait » le doigt quand la ligne bougeait). Le doigt est maintenant suivi sur toute la page.
 
