@@ -1,5 +1,9 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.6 — 2026-11-05
+- L'écran est maintenant une carte posée sur un papier quadrillé : petite marge tout autour, cadre épais et ombre décalée.
+- Glisser : la ligne attrapée « se soulève » (un peu plus grande, cadre et ombre décalée).
+
 ## v0.5 — 2026-11-05
 - Mode « ranger » : bouton (flèches haut/bas) dans le bandeau de chaque écran. Les poignées n'apparaissent qu'en mode ranger ; le bouton devient « OK » pour sortir, et le mode se coupe en changeant d'écran.
 - Ranger aussi dans « Prêt à partir » : ordre et sac des objets juste pour cette sortie (effacés par « Tout décocher ») ; cases et croix cachées pendant qu'on range.

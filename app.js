@@ -25,7 +25,7 @@ import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplif
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.5";
+const VERSION = "v0.6";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :

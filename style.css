@@ -19,6 +19,7 @@
   --discret: #6b6a64;
   --fin: #d6d4cc;          /* traits fins entre les lignes */
   --pris: #a3a19a;         /* objets déjà pris */
+  --quadrillage: #e3e1d8;  /* carreaux du papier autour de l'écran */
   --danger: #b3261e;
   --trait: 2.5px;          /* épaisseur des traits « brut » */
   --ombre: 3px;            /* décalage de l'ombre des boutons */
@@ -36,6 +37,7 @@
     --discret: #8f8d86;
     --fin: #343432;
     --pris: #5c5b57;
+    --quadrillage: #222221;
     --danger: #f2b8b5;
   }
 }
@@ -72,20 +74,31 @@ html, body {
 }
 .mono { font-family: var(--mono); font-weight: 700; }
 
-/* Chaque écran : un grand cadre à traits épais, centré sur PC */
+/* Fond « papier quadrillé » autour de l'écran (carreaux de 12 px, traits très fins) */
+body {
+  background-color: var(--fond);
+  background-image:
+    linear-gradient(var(--quadrillage) 1px, transparent 1px),
+    linear-gradient(90deg, var(--quadrillage) 1px, transparent 1px);
+  background-size: 12px 12px;
+  background-attachment: fixed;
+}
+
+/* Chaque écran : une carte posée sur le papier (cadre épais + ombre décalée),
+   avec une petite marge tout autour. Centrée sur PC. */
 .ecran {
+  --marge: 8px;
+  width: calc(100% - 2 * var(--marge) - var(--ombre));
   max-width: 520px;
-  margin: 0 auto;
-  min-height: 100vh;
-  min-height: 100dvh;
+  margin: calc(var(--marge) + env(safe-area-inset-top)) auto calc(var(--marge) + var(--ombre) + env(safe-area-inset-bottom));
+  min-height: calc(100dvh - 2 * var(--marge) - var(--ombre) - env(safe-area-inset-top) - env(safe-area-inset-bottom));
   display: flex;
   flex-direction: column;
   background: var(--carte);
-  border-left: var(--trait) solid var(--encre);
-  border-right: var(--trait) solid var(--encre);
-  padding-bottom: env(safe-area-inset-bottom);
+  border: var(--trait) solid var(--encre);
+  box-shadow: 5px 5px 0 var(--encre);
 }
-@media (max-width: 540px) { .ecran { border-left: 0; border-right: 0; } }
+@media (min-width: 560px) { .ecran { --marge: 20px; } }
 .ecran[hidden] { display: none; }
 
 /* Icônes : trait fin, couleur du texte */
@@ -187,11 +200,15 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .poignee .ic { width: 18px; height: 18px; }
 .vide-poignee { width: 22px; cursor: default; }
+/* Ligne attrapée : elle « se soulève » (un peu plus grande, cadre et ombre décalée) */
+[data-choisir], [data-objet], [data-cle], .contenant { transition: transform .12s ease-out, box-shadow .12s ease-out; }
 .glisse {
   position: relative; z-index: 4;
-  background: var(--fond);
+  background: var(--carte);
+  transform: scale(1.04);
   outline: var(--trait) solid var(--encre); outline-offset: -2px;
-  box-shadow: var(--ombre) var(--ombre) 0 var(--encre);
+  box-shadow: 5px 5px 0 var(--encre);
+  cursor: grabbing;
 }
 
 /* Menu « Partir de zéro / Copier » sous « Nouvelle liste » */
