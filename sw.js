@@ -4,7 +4,7 @@
 // même sans réseau. (Les données, elles, sont gérées par Firebase.)
 // À CHAQUE NOUVELLE VERSION : changer le numéro ci-dessous.
 // =========================================================
-const CACHE = "stuff-to-go-v0.2";
+const CACHE = "stuff-to-go-v0.3";
 
 // Fichiers de l'appli à garder dès l'installation
 const FICHIERS = [

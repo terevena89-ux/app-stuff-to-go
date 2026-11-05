@@ -43,6 +43,7 @@
   </div>
   <ul id="liste-listes" class="lignes"></ul>
   <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Nouvelle liste</button>
+  <div id="choix-nouvelle" class="choix-nouvelle"></div>
   <div class="pied">
     <button id="btn-preparer" class="btn-principal coul-jaune large"></button>
   </div>
@@ -76,7 +77,9 @@
   <div id="objets-liste"></div>
   <!-- Formulaire d'ajout, toujours en bas -->
   <form id="form-objet" class="form-ajout" autocomplete="off">
-    <input id="objet-nom" placeholder="Objet à ajouter" required>
+    <!-- Suggestions : objets déjà présents dans mes autres listes -->
+    <div id="suggestions" class="suggestions"></div>
+    <input id="objet-nom" placeholder="Objet à ajouter (ou cherche dans tes listes)" required>
     <div class="form-ligne">
       <select id="objet-sac" aria-label="Contenant"></select>
       <input id="objet-qte" type="number" min="1" max="99" placeholder="Qté" aria-label="Quantité">

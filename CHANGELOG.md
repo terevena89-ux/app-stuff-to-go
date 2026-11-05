@@ -1,5 +1,11 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.3 — 2026-11-05
+- « Nouvelle liste » propose : partir de zéro, ou copier une liste existante (« Concert (copie) »).
+- Suggestions en tapant un objet : l'appli propose ceux de tes autres listes ; en choisir un reprend son contenant et son icône.
+- Glisser pour réordonner, avec la poignée (les petits points) : les listes sur l'accueil, les objets dans Modifier (glisser un objet sous un autre bandeau change son contenant), les sacs dans Réglages (remplace les flèches).
+- Ligne d'objet plus compacte dans Modifier.
+
 ## v0.2 — 2026-11-05
 Nouveau style « brut ».
 - Angles droits, traits épais, ombres décalées sur les boutons.

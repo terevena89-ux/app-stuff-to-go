@@ -21,11 +21,11 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lireFeuille } from "./excel-style.js";
-import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant } from "./icones.js";
+import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplifier } from "./icones.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.2";
+const VERSION = "v0.3";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -203,7 +203,12 @@ function router() {
   else { afficherAccueil(); montrer("accueil"); }
 }
 // En changeant d'écran, on referme une éventuelle grille d'icônes
-window.addEventListener("hashchange", () => { grilleOuverte = null; router(); });
+window.addEventListener("hashchange", () => {
+  grilleOuverte = null;
+  choixNouvelleOuvert = false;
+  $("suggestions").innerHTML = "";
+  router();
+});
 
 // ---------- 4. Affichage ----------
 
@@ -213,6 +218,10 @@ function icone(nom, classe = "") {
 }
 // Case à cocher carrée (la coche n'apparaît que si la ligne a la classe « coche »)
 const caseACocher = () => `<span class="case">${icone("check")}</span>`;
+// Poignée (les petits points) : on l'attrape pour faire glisser la ligne
+const poignee = () => `<span class="poignee" aria-label="Déplacer">${icone("grip-vertical")}</span>`;
+// Menu « Partir de zéro / Copier une liste » ouvert ou non sur l'accueil
+let choixNouvelleOuvert = false;
 // Protège le texte tapé par l'utilisateur avant de l'afficher (évite qu'un « < » casse la page)
 function echapper(t) {
   return String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -237,7 +246,7 @@ function grouperParContenant(objets) {
 
 // Bandeau coloré d'un contenant, avec un compteur à droite
 function bandeau(g, compteur) {
-  return `<h2 class="titre-section coul-${g.couleur}">${icone(iconeContenant(g))}<span class="nom">${echapper(g.nom)}</span><span>${compteur}</span></h2>`;
+  return `<h2 class="titre-section coul-${g.couleur}" data-sac="${g.id}">${icone(iconeContenant(g))}<span class="nom">${echapper(g.nom)}</span><span>${compteur}</span></h2>`;
 }
 
 // --- Écran 1 : accueil ---
@@ -246,15 +255,23 @@ function afficherAccueil() {
   $("recherche-listes").hidden = etat.listes.length <= 6; // la recherche n'apparaît que si la liste devient longue
   const listes = etat.listes.filter(l => !filtre || cle(l.nom).includes(filtre));
 
+  // Pendant une recherche, pas de poignée : l'ordre n'aurait pas de sens sur une liste filtrée
   $("liste-listes").innerHTML = listes.length ? listes.map(l => {
     const choisie = etat.selection.includes(l.id);
     return `<li class="ligne ligne-cliquable ${choisie ? "coche" : ""}" data-choisir="${l.id}">
-      ${caseACocher()}${icone(iconeListe(l))}
+      ${filtre ? "" : poignee()}${caseACocher()}${icone(iconeListe(l))}
       <span class="nom">${echapper(l.nom)}</span>
       <span class="nb">${String(l.objets.length).padStart(2, "0")}</span>
       <button class="btn-icone" data-modifier="${l.id}" aria-label="Modifier ${echapper(l.nom)}">${icone("pencil")}</button>
     </li>`;
   }).join("") : `<li class="vide">${etat.listes.length ? "Aucune liste trouvée." : "Crée ta première liste, par exemple « Travail » ou « Piscine »."}</li>`;
+
+  // Petit menu sous « Nouvelle liste » : partir de zéro, ou copier une liste existante
+  $("choix-nouvelle").innerHTML = choixNouvelleOuvert
+    ? `<button class="ligne-ajout" data-nouvelle="vide">${icone("plus")}Partir de zéro</button>` +
+      etat.listes.map(l => `<button class="ligne-ajout" data-nouvelle="${l.id}">${icone("copy")}Copier « ${echapper(l.nom)} »</button>`).join("")
+    : "";
+  $("btn-nouvelle-liste").classList.toggle("ouvert", choixNouvelleOuvert);
 
   const n = etat.selection.filter(id => etat.listes.some(l => l.id === id)).length;
   const btn = $("btn-preparer");
@@ -327,6 +344,7 @@ function afficherEditionListe(l) {
     g.objets.map(o => {
       const ouvert = grilleOuverte === "objet:" + o.id;
       return `<div class="objet-edit" data-objet="${o.id}">
+        ${poignee()}
         <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="objet:${o.id}" aria-label="Changer l'icône">${icone(iconeObjet(o))}</button>
         <input class="e-nom" value="${echapper(o.nom)}" aria-label="Nom de l'objet">
         <select class="e-sac" aria-label="Contenant">${optionsContenants(o.sac)}</select>
@@ -348,15 +366,15 @@ function afficherReglages() {
   $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
   $("liste-sacs").innerHTML = contenants().map((c, i) => {
     const ouvert = grilleOuverte === "sac:" + c.id;
-    const j = i - 1; // position dans etat.sacs (Poches n'en fait pas partie)
-    const commandes = c.id === "poches"
+    const estPoches = c.id === "poches";
+    const commandes = estPoches
       ? `<span class="nom">Poches</span><span class="nb">FIXE</span>`
       : `<input class="s-nom" value="${echapper(c.nom)}" aria-label="Nom du sac">
-         <button class="btn-icone" data-monter="${j}" aria-label="Monter" ${j === 0 ? "disabled" : ""}>${icone("chevron-up")}</button>
-         <button class="btn-icone" data-descendre="${j}" aria-label="Descendre" ${j === etat.sacs.length - 1 ? "disabled" : ""}>${icone("chevron-down")}</button>
          <button class="btn-icone" data-suppr-sac="${c.id}" aria-label="Supprimer">${icone("trash")}</button>`;
+    // Poches ne se déplace pas : à la place de la poignée, un espace vide de même largeur
     return `<div class="contenant" data-sac="${c.id}">
       <div class="ligne">
+        ${estPoches ? `<span class="poignee vide-poignee"></span>` : poignee()}
         <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="sac:${c.id}" aria-label="Changer l'icône">${icone(iconeContenant(c))}</button>
         ${commandes}
       </div>
@@ -438,6 +456,7 @@ document.addEventListener("click", e => {
 
 // --- Accueil ---
 $("liste-listes").addEventListener("click", e => {
+  if (e.target.closest(".poignee")) return; // attraper la poignée ne coche pas la liste
   const modif = e.target.closest("[data-modifier]");
   if (modif) { aller("liste=" + modif.dataset.modifier); return; }
   const ligne = e.target.closest("[data-choisir]");
@@ -450,13 +469,28 @@ $("liste-listes").addEventListener("click", e => {
 });
 $("champ-recherche").addEventListener("input", afficherAccueil);
 $("btn-preparer").addEventListener("click", () => aller("prep"));
-$("btn-nouvelle-liste").addEventListener("click", () => {
-  const l = { id: nouvelId(), nom: "Nouvelle liste", objets: [] };
+// Crée une liste (vide, ou copie d'une autre) et l'ouvre, nom prêt à être retapé
+function creerListe(modele) {
+  const l = modele
+    ? { ...structuredClone(modele), id: nouvelId(), nom: modele.nom + " (copie)" }
+    : { id: nouvelId(), nom: "Nouvelle liste", objets: [] };
+  l.objets.forEach(o => { o.id = nouvelId(); }); // chaque objet copié reçoit son propre identifiant
   etat.listes.push(l);
+  choixNouvelleOuvert = false;
   sauver();
   aller("liste=" + l.id);
   // Nom pré-sélectionné : il suffit de taper pour le remplacer
   setTimeout(() => { $("nom-liste").focus(); $("nom-liste").select(); }, 50);
+}
+$("btn-nouvelle-liste").addEventListener("click", () => {
+  if (!etat.listes.length) { creerListe(null); return; } // rien à copier : on crée directement
+  choixNouvelleOuvert = !choixNouvelleOuvert;
+  afficherAccueil();
+});
+$("choix-nouvelle").addEventListener("click", e => {
+  const b = e.target.closest("[data-nouvelle]");
+  if (!b) return;
+  creerListe(b.dataset.nouvelle === "vide" ? null : etat.listes.find(l => l.id === b.dataset.nouvelle));
 });
 
 // --- Checklist ---
@@ -505,6 +539,7 @@ $("form-objet").addEventListener("submit", e => {
   sauver();
   $("objet-nom").value = "";
   $("objet-qte").value = "";
+  afficherSuggestions(); // vide les suggestions
   afficherEditionListe(listeEnCours);
   $("objet-nom").focus(); // prêt pour taper l'objet suivant
 });
@@ -561,15 +596,134 @@ $("liste-sacs").addEventListener("click", e => {
     afficherReglages();
     return;
   }
-  const echanger = (i, j) => { [etat.sacs[i], etat.sacs[j]] = [etat.sacs[j], etat.sacs[i]]; sauver(); afficherReglages(); };
-  if (b.dataset.monter) echanger(+b.dataset.monter, +b.dataset.monter - 1);
-  else if (b.dataset.descendre) echanger(+b.dataset.descendre, +b.dataset.descendre + 1);
-  else if (b.dataset.supprSac) {
+  if (b.dataset.supprSac) {
     const s = etat.sacs.find(x => x.id === b.dataset.supprSac);
     supprimerAvecAnnulation(`Sac « ${s.nom} » supprimé`, () => {
       etat.sacs = etat.sacs.filter(x => x.id !== s.id);
     });
   }
+});
+
+// --- Suggestions pendant la saisie d'un objet ---
+// Propose les objets déjà présents dans mes autres listes (sans accents ni majuscules :
+// « gou » trouve « Gourde »). En choisir un l'ajoute avec son contenant et son icône.
+function suggestions(texte) {
+  const q = simplifier(texte.trim());
+  if (!q || !listeEnCours) return [];
+  const deja = new Set(listeEnCours.objets.map(o => cle(o.nom)));
+  const vus = new Map();
+  etat.listes.forEach(l => l.objets.forEach(o => {
+    const k = cle(o.nom);
+    if (!deja.has(k) && !vus.has(k) && simplifier(o.nom).includes(q)) vus.set(k, o);
+  }));
+  // Ceux qui COMMENCENT par le texte tapé passent en premier
+  return [...vus.values()]
+    .sort((a, b) => simplifier(b.nom).startsWith(q) - simplifier(a.nom).startsWith(q))
+    .slice(0, 5);
+}
+function afficherSuggestions() {
+  const liste = suggestions($("objet-nom").value);
+  $("suggestions").innerHTML = liste.map((o, i) => {
+    const c = contenants().find(x => x.id === o.sac) || SANS_SAC;
+    return `<button type="button" class="suggestion" data-suggestion="${i}">
+      ${icone(iconeObjet(o))}<span class="nom">${echapper(o.nom)}</span>
+      <span class="etiquette coul-${c.couleur}">${echapper(c.nom)}</span></button>`;
+  }).join("");
+  suggestionsAffichees = liste;
+}
+let suggestionsAffichees = [];
+$("objet-nom").addEventListener("input", afficherSuggestions);
+$("suggestions").addEventListener("click", e => {
+  const b = e.target.closest("[data-suggestion]");
+  const modele = b && suggestionsAffichees[+b.dataset.suggestion];
+  if (!modele || !listeEnCours) return;
+  // On garde le contenant d'origine s'il existe encore, sinon celui du menu
+  const sac = contenants().some(c => c.id === modele.sac) ? modele.sac : $("objet-sac").value;
+  const qteTapee = parseInt($("objet-qte").value, 10);
+  const nouvel = { id: nouvelId(), nom: modele.nom, qte: qteTapee > 1 ? qteTapee : (modele.qte || 1), sac };
+  if (modele.icone) nouvel.icone = modele.icone;
+  listeEnCours.objets.push(nouvel);
+  sauver();
+  $("objet-nom").value = "";
+  $("objet-qte").value = "";
+  afficherSuggestions();
+  afficherEditionListe(listeEnCours);
+  $("objet-nom").focus();
+});
+
+// --- Glisser pour réordonner ---
+// On attrape une ligne par sa poignée, on la promène, on lâche : l'appli relit
+// l'ordre des lignes à l'écran et l'enregistre (fonction « auLacher »).
+// Marche au doigt comme à la souris (« pointer » = doigt, souris ou stylet).
+function rendreTriable(conteneur, selecteur, auLacher) {
+  conteneur.addEventListener("pointerdown", e => {
+    const prise = e.target.closest(".poignee");
+    const ligne = prise && !prise.classList.contains("vide-poignee") && prise.closest(selecteur);
+    if (!ligne) return;
+    e.preventDefault();
+    try { prise.setPointerCapture(e.pointerId); } catch (err) { /* rare : pointeur déjà relâché */ } // la poignée reçoit les mouvements même hors d'elle
+    ligne.classList.add("glisse");
+    const bouger = ev => {
+      // Défilement automatique près des bords de l'écran
+      if (ev.clientY < 80) window.scrollBy(0, -14);
+      else if (ev.clientY > innerHeight - 80) window.scrollBy(0, 14);
+      const sous = document.elementFromPoint(ev.clientX, ev.clientY);
+      const cible = sous && sous.closest(selecteur + ", .titre-section");
+      if (!cible || cible === ligne || !conteneur.contains(cible)) return;
+      const r = cible.getBoundingClientRect();
+      // Sur un bandeau de contenant : on se place juste en dessous (en tête de ce contenant)
+      const apres = cible.classList.contains("titre-section") || ev.clientY > r.top + r.height / 2;
+      if (apres) cible.after(ligne); else cible.before(ligne);
+    };
+    const lacher = () => {
+      prise.removeEventListener("pointermove", bouger);
+      prise.removeEventListener("pointerup", lacher);
+      prise.removeEventListener("pointercancel", lacher);
+      ligne.classList.remove("glisse");
+      auLacher();
+    };
+    prise.addEventListener("pointermove", bouger);
+    prise.addEventListener("pointerup", lacher);
+    prise.addEventListener("pointercancel", lacher);
+  });
+}
+
+// Accueil : l'ordre des listes
+rendreTriable($("liste-listes"), "[data-choisir]", () => {
+  const ordre = [...$("liste-listes").querySelectorAll("[data-choisir]")].map(li => li.dataset.choisir);
+  etat.listes.sort((a, b) => ordre.indexOf(a.id) - ordre.indexOf(b.id));
+  sauver();
+  afficherAccueil();
+});
+
+// Modifier une liste : l'ordre des objets, et leur contenant (celui du bandeau au-dessus)
+rendreTriable($("objets-liste"), "[data-objet]", () => {
+  const l = listeEnCours;
+  if (!l) return;
+  let sac = null;
+  const nouvelOrdre = [];
+  for (const el of $("objets-liste").children) {
+    if (el.classList.contains("titre-section")) sac = el.dataset.sac;
+    else if (el.dataset.objet) {
+      const o = l.objets.find(x => x.id === el.dataset.objet);
+      if (!o) continue;
+      if (sac && sac !== "?") o.sac = sac; // « Sans sac » ne change rien
+      nouvelOrdre.push(o);
+    }
+  }
+  // Sécurité : on ne perd jamais un objet qui n'aurait pas été retrouvé à l'écran
+  l.objets.forEach(o => { if (!nouvelOrdre.includes(o)) nouvelOrdre.push(o); });
+  l.objets = nouvelOrdre;
+  sauver();
+  afficherEditionListe(l);
+});
+
+// Réglages : l'ordre des sacs (Poches reste toujours en premier)
+rendreTriable($("liste-sacs"), ".contenant", () => {
+  const ordre = [...$("liste-sacs").querySelectorAll(".contenant")].map(el => el.dataset.sac);
+  etat.sacs.sort((a, b) => ordre.indexOf(a.id) - ordre.indexOf(b.id));
+  sauver();
+  afficherReglages();
 });
 
 // ---------- 6. Export / import Excel ----------

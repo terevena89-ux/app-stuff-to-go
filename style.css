@@ -175,6 +175,39 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .coche .case { background: var(--encre); color: var(--carte); }
 .coche .case .ic { opacity: 1; }
 
+/* ---------- Glisser pour réordonner ---------- */
+.poignee {
+  display: flex; padding: 6px 2px; color: var(--discret);
+  cursor: grab; touch-action: none; /* le doigt déplace la ligne au lieu de faire défiler */
+}
+.poignee .ic { width: 18px; height: 18px; }
+.vide-poignee { width: 22px; cursor: default; }
+.glisse {
+  position: relative; z-index: 4;
+  background: var(--fond);
+  outline: var(--trait) solid var(--encre); outline-offset: -2px;
+  box-shadow: var(--ombre) var(--ombre) 0 var(--encre);
+}
+
+/* Menu « Partir de zéro / Copier » sous « Nouvelle liste » */
+.choix-nouvelle:not(:empty) { background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
+.choix-nouvelle .ligne-ajout { color: var(--encre); padding-left: 24px; }
+#btn-nouvelle-liste.ouvert { color: var(--encre); font-weight: 700; }
+
+/* Suggestions au-dessus du champ « Objet à ajouter » */
+.suggestions:empty { display: none; }
+.suggestions { display: flex; flex-direction: column; border: var(--trait) solid var(--encre); }
+.suggestion {
+  display: flex; align-items: center; gap: 8px; padding: 6px 8px;
+  background: var(--carte); border: 0; border-bottom: 1px solid var(--fin); text-align: left;
+}
+.suggestion:last-child { border-bottom: 0; }
+.suggestion .nom { flex: 1; min-width: 0; }
+.etiquette {
+  font: 700 10px var(--mono); text-transform: uppercase;
+  padding: 2px 5px; background: var(--cf); color: var(--ct); border: 1.5px solid var(--encre);
+}
+
 /* ---------- Recherche ---------- */
 .recherche {
   display: flex; align-items: center; gap: 6px; color: var(--discret);
@@ -224,8 +257,8 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 .objet-edit input, .objet-edit select { height: 38px; border-color: transparent; background: transparent; padding: 0 4px; }
 .objet-edit .e-nom { flex: 1; min-width: 0; }
-.objet-edit .e-sac { width: 104px; color: var(--discret); font-size: 13px; }
-.objet-edit .e-qte { width: 40px; font: 700 13px var(--mono); text-align: center; }
+.objet-edit .e-sac { width: 76px; color: var(--discret); font-size: 13px; }
+.objet-edit .e-qte { width: 32px; font: 700 13px var(--mono); text-align: center; }
 /* Bouton-icône qui ouvre la grille de choix */
 .choix-icone { background: none; border: 2px solid transparent; padding: 5px; display: flex; color: var(--encre); }
 .choix-icone.ouvert { border-color: var(--encre); background: var(--fond); }

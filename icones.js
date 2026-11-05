@@ -31,7 +31,7 @@ export const ICONES_CHOIX = [
 ];
 
 // Met un texte en minuscules et sans accents, pour comparer facilement
-const simplifier = t => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+export const simplifier = t => String(t).toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
 
 // Règles de devinette : [mots-clés séparés par |, icône].
 // L'ORDRE COMPTE : les règles les plus précises d'abord
