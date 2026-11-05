@@ -1,6 +1,6 @@
 # Journal des nouveautés — Stuff to go
 
-## v1.0 — 2026-11-05
+## v0.1 — 2026-11-05
 Première version.
 - Listes par endroit (Travail, Sport, Piscine...), à combiner : on coche où on va, puis « Préparer ».
 - Checklist rangée par contenant : « Poches » d'abord, puis chaque sac.

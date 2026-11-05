@@ -24,7 +24,7 @@ import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lire
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.0";
+const VERSION = "v0.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 const POCHES = { id: "poches", nom: "Poches" }; // contenant fixe, toujours en premier
 
