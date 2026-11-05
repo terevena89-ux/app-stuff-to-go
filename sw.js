@@ -4,12 +4,14 @@
 // même sans réseau. (Les données, elles, sont gérées par Firebase.)
 // À CHAQUE NOUVELLE VERSION : changer le numéro ci-dessous.
 // =========================================================
-const CACHE = "stuff-to-go-v0.1";
+const CACHE = "stuff-to-go-v0.2";
 
 // Fichiers de l'appli à garder dès l'installation
 const FICHIERS = [
-  "./", "index.html", "style.css", "app.js", "excel-style.js", "firebase-config.js",
-  "manifest.json", "icones/icone.svg", "icones/icone-192.png"
+  "./", "index.html", "style.css", "app.js", "icones.js", "excel-style.js", "firebase-config.js",
+  "manifest.json", "icones/icone.svg", "icones/icone-192.png", "icones/tabler.svg",
+  "polices/space-grotesk-latin-400-normal.woff2", "polices/space-grotesk-latin-700-normal.woff2",
+  "polices/jetbrains-mono-latin-400-normal.woff2", "polices/jetbrains-mono-latin-700-normal.woff2"
 ];
 
 self.addEventListener("install", e => {

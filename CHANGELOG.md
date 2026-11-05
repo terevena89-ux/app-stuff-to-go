@@ -1,5 +1,14 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.2 — 2026-11-05
+Nouveau style « brut ».
+- Angles droits, traits épais, ombres décalées sur les boutons.
+- Police mixte : Space Grotesk pour les textes, JetBrains Mono pour les chiffres et les titres (copiées dans l'appli, marchent hors ligne).
+- Une couleur par contenant (8 au choix dans Réglages), en bandeau dans la checklist ; atténuées en thème sombre.
+- Barre de progression et compteur par contenant (ex. 2/6).
+- Icônes partout (listes, contenants, objets), choisies dans une grille ; sans choix, l'appli devine d'après le nom (gourde → bouteille).
+- Excel : nouvelles colonnes Icône et Couleur, nouvelle feuille « Endroits ». Les fichiers de la v0.1 restent importables.
+
 ## v0.1 — 2026-11-05
 Première version.
 - Listes par endroit (Travail, Sport, Piscine...), à combiner : on coche où on va, puis « Préparer ».

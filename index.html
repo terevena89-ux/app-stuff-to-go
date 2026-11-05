@@ -6,43 +6,18 @@
   <title>Stuff to go</title>
   <meta name="description" content="Mes checklists d'affaires à prendre selon l'endroit où je vais.">
   <!-- Couleur de la barre du téléphone, selon le thème clair/sombre -->
-  <meta name="theme-color" content="#f6f7f8" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#16181b" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#1d1d1c" media="(prefers-color-scheme: dark)">
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icones/icone.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icones/icone-192.png">
+  <link rel="preload" href="polices/space-grotesk-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="polices/jetbrains-mono-latin-700-normal.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-
-<!-- Planche d'icônes : chaque <symbol> est une icône sobre (trait fin),
-     réutilisée partout avec <svg><use href="#nom"></use></svg>.
-     Dessinées ici pour ne dépendre d'aucun service extérieur. -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <defs>
-    <symbol id="i-case" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/></symbol>
-    <symbol id="i-case-ok" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="3"/><path d="M8.5 12.5l2.5 2.5 4.5-5"/></symbol>
-    <symbol id="i-reglages" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8"/></symbol>
-    <symbol id="i-retour" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></symbol>
-    <symbol id="i-crayon" viewBox="0 0 24 24"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></symbol>
-    <symbol id="i-poubelle" viewBox="0 0 24 24"><path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></symbol>
-    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
-    <symbol id="i-croix" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
-    <symbol id="i-rafraichir" viewBox="0 0 24 24"><path d="M19 12a7 7 0 1 1-2-4.9"/><path d="M19 4v4h-4"/></symbol>
-    <symbol id="i-fleche" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
-    <symbol id="i-haut" viewBox="0 0 24 24"><path d="M6 15l6-6 6 6"/></symbol>
-    <symbol id="i-bas" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></symbol>
-    <symbol id="i-main" viewBox="0 0 24 24"><path d="M8 13V6.5a1.5 1.5 0 0 1 3 0V11M11 10V4.5a1.5 1.5 0 0 1 3 0V11M14 10V6.5a1.5 1.5 0 0 1 3 0V14a6 6 0 0 1-6 6h-1a5 5 0 0 1-4-2l-2.6-3.6a1.5 1.5 0 0 1 2.4-1.8L8 14"/></symbol>
-    <symbol id="i-sac" viewBox="0 0 24 24"><path d="M6 10a6 6 0 0 1 12 0v10H6z"/><path d="M9 6V4.5a3 3 0 0 1 6 0V6M9 14h6"/></symbol>
-    <symbol id="i-loupe" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></symbol>
-    <symbol id="i-export" viewBox="0 0 24 24"><path d="M12 4v11M8 11l4 4 4-4M5 19h14"/></symbol>
-    <symbol id="i-import" viewBox="0 0 24 24"><path d="M12 15V4M8 8l4-4 4 4M5 19h14"/></symbol>
-    <symbol id="i-sortie" viewBox="0 0 24 24"><path d="M14 4h5v16h-5M10 8l-4 4 4 4M6 12h10"/></symbol>
-    <symbol id="i-nuage-ok" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 9a4.5 4.5 0 0 1 .5 9z"/><path d="M9.5 13.5l2 2 3.5-3.5"/></symbol>
-    <symbol id="i-nuage-attente" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 9a4.5 4.5 0 0 1 .5 9z"/><path d="M12 11v3l2 1"/></symbol>
-    <symbol id="i-nuage-off" viewBox="0 0 24 24"><path d="M7 18a4 4 0 0 1-.6-8A5.5 5.5 0 0 1 17 9a4.5 4.5 0 0 1 .5 9z"/><path d="M4 4l16 16"/></symbol>
-  </defs>
-</svg>
+<!-- Les icônes viennent de la planche icones/tabler.svg :
+     <svg class="ic"><use href="icones/tabler.svg#nom"></use></svg> -->
 
 <!-- ============ ÉCRAN DE CONNEXION ============ -->
 <section id="ecran-connexion" class="ecran" hidden>
@@ -50,7 +25,7 @@
     <img src="icones/icone.svg" alt="" width="64" height="64">
     <h1>Stuff to go</h1>
     <p class="discret">Mes affaires à prendre, selon où je vais.</p>
-    <button id="btn-connexion" class="btn-principal">Se connecter avec Google</button>
+    <button id="btn-connexion" class="btn-principal coul-jaune">Se connecter avec Google</button>
     <p id="connexion-erreur" class="erreur" hidden></p>
   </div>
 </section>
@@ -59,42 +34,45 @@
 <section id="ecran-accueil" class="ecran" hidden>
   <header class="barre">
     <h1 class="titre">Où vas-tu ?</h1>
-    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="#i-nuage-ok"></use></svg></span>
-    <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="#i-reglages"></use></svg></button>
+    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
+    <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
   </header>
   <div id="recherche-listes" class="recherche" hidden>
-    <svg class="ic"><use href="#i-loupe"></use></svg>
+    <svg class="ic"><use href="icones/tabler.svg#search"></use></svg>
     <input id="champ-recherche" type="search" placeholder="Chercher une liste">
   </div>
   <ul id="liste-listes" class="lignes"></ul>
-  <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="#i-plus"></use></svg>Nouvelle liste</button>
+  <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Nouvelle liste</button>
   <div class="pied">
-    <button id="btn-preparer" class="btn-principal large">Préparer <svg class="ic"><use href="#i-fleche"></use></svg></button>
+    <button id="btn-preparer" class="btn-principal coul-jaune large"></button>
   </div>
 </section>
 
 <!-- ============ ÉCRAN 2 : CHECKLIST (listes fusionnées) ============ -->
 <section id="ecran-checklist" class="ecran" hidden>
   <header class="barre">
-    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="#i-retour"></use></svg></button>
+    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Prêt à partir</h1>
     <span id="compteur" class="compteur"></span>
-    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="#i-nuage-ok"></use></svg></span>
+    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
   </header>
+  <div class="progression"><span id="progression"></span></div>
   <div id="pastilles" class="pastilles"></div>
   <div id="checklist"></div>
   <div class="pied">
-    <button id="btn-tout-decocher" class="btn large"><svg class="ic"><use href="#i-rafraichir"></use></svg>Tout décocher</button>
+    <button id="btn-tout-decocher" class="btn large"><svg class="ic"><use href="icones/tabler.svg#refresh"></use></svg>Tout décocher</button>
   </div>
 </section>
 
 <!-- ============ ÉCRAN 3 : MODIFIER UNE LISTE ============ -->
 <section id="ecran-liste" class="ecran" hidden>
   <header class="barre">
-    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="#i-retour"></use></svg></button>
+    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
+    <button id="icone-liste" class="choix-icone" aria-label="Changer l'icône de la liste"></button>
     <input id="nom-liste" class="titre-modifiable" aria-label="Nom de la liste">
-    <button id="btn-suppr-liste" class="btn-icone" aria-label="Supprimer la liste"><svg class="ic"><use href="#i-poubelle"></use></svg></button>
+    <button id="btn-suppr-liste" class="btn-icone" aria-label="Supprimer la liste"><svg class="ic"><use href="icones/tabler.svg#trash"></use></svg></button>
   </header>
+  <div id="grille-liste"></div>
   <div id="objets-liste"></div>
   <!-- Formulaire d'ajout, toujours en bas -->
   <form id="form-objet" class="form-ajout" autocomplete="off">
@@ -102,7 +80,7 @@
     <div class="form-ligne">
       <select id="objet-sac" aria-label="Contenant"></select>
       <input id="objet-qte" type="number" min="1" max="99" placeholder="Qté" aria-label="Quantité">
-      <button class="btn-principal" aria-label="Ajouter"><svg class="ic"><use href="#i-plus"></use></svg></button>
+      <button class="btn-principal coul-jaune" aria-label="Ajouter"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
     </div>
   </form>
 </section>
@@ -110,30 +88,32 @@
 <!-- ============ ÉCRAN 4 : RÉGLAGES ============ -->
 <section id="ecran-reglages" class="ecran" hidden>
   <header class="barre">
-    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="#i-retour"></use></svg></button>
+    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Réglages</h1>
   </header>
 
-  <h2 class="section">Mes sacs</h2>
-  <p class="aide">« Poches » est toujours en premier. Les sacs s'affichent ensuite dans cet ordre.</p>
-  <ul id="liste-sacs" class="lignes"></ul>
+  <h2 class="section"><span>Contenants</span><span id="nb-contenants"></span></h2>
+  <p class="aide">Touche une icône pour la changer. « Poches » reste toujours en premier.</p>
+  <div id="liste-sacs"></div>
   <form id="form-sac" class="form-ligne" autocomplete="off">
-    <input id="sac-nom" placeholder="Nouveau sac (ex. Valise)" required>
-    <button class="btn-principal" aria-label="Ajouter le sac"><svg class="ic"><use href="#i-plus"></use></svg></button>
+    <input id="sac-nom" placeholder="Nouveau sac (ex. Sacoche)" required>
+    <button class="btn-principal coul-jaune" aria-label="Ajouter le sac"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
   </form>
 
-  <h2 class="section">Sauvegarde Excel</h2>
+  <h2 class="section"><span>Sauvegarde Excel</span></h2>
   <div class="boutons">
-    <button id="btn-export" class="btn"><svg class="ic"><use href="#i-export"></use></svg>Exporter</button>
-    <button id="btn-import" class="btn"><svg class="ic"><use href="#i-import"></use></svg>Importer</button>
+    <button id="btn-export" class="btn"><svg class="ic"><use href="icones/tabler.svg#download"></use></svg>Exporter</button>
+    <button id="btn-import" class="btn"><svg class="ic"><use href="icones/tabler.svg#upload"></use></svg>Importer</button>
     <input id="fichier-import" type="file" accept=".xlsx" hidden>
   </div>
 
-  <h2 class="section">Compte</h2>
+  <h2 class="section"><span>Compte</span></h2>
   <p id="compte-info" class="aide"></p>
-  <button id="btn-deconnexion" class="btn"><svg class="ic"><use href="#i-sortie"></use></svg>Se déconnecter</button>
+  <div class="boutons">
+    <button id="btn-deconnexion" class="btn"><svg class="ic"><use href="icones/tabler.svg#logout"></use></svg>Se déconnecter</button>
+  </div>
 
-  <p class="version">Stuff to go <span id="version"></span></p>
+  <p class="version">Stuff to go · <span id="version"></span></p>
 </section>
 
 <!-- Petit message en bas de l'écran (« Élément supprimé — Annuler ») -->

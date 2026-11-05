@@ -21,28 +21,37 @@ import {
 } from "https://www.gstatic.com/firebasejs/12.4.0/firebase-firestore.js";
 import { firebaseConfig } from "./firebase-config.js";
 import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lireFeuille } from "./excel-style.js";
+import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant } from "./icones.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.1";
+const VERSION = "v0.2";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
-const POCHES = { id: "poches", nom: "Poches" }; // contenant fixe, toujours en premier
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
-//   sacs      : mes sacs, dans l'ordre d'affichage        [{ id, nom }]
-//   listes    : mes listes par endroit                    [{ id, nom, objets: [{ id, nom, qte, sac }] }]
+//   poches    : réglages du contenant fixe « Poches »     { couleur, icone }
+//   sacs      : mes sacs, dans l'ordre d'affichage        [{ id, nom, couleur, icone }]
+//   listes    : mes listes par endroit                    [{ id, nom, icone, objets: [{ id, nom, qte, sac, icone }] }]
 //   selection : les listes cochées sur l'accueil, dans l'ordre où je les ai cochées
 //   coches    : les objets déjà pris (par leur nom en minuscules)
+// Les « icone » sont facultatives : sans choix de ma part, l'appli devine d'après le nom.
 let etat = etatVide();
 
 function etatVide() {
-  return { sacs: [{ id: "sac-a-dos", nom: "Sac à dos" }], listes: [], selection: [], coches: [] };
+  return {
+    poches: { couleur: "jaune" },
+    sacs: [{ id: "sac-a-dos", nom: "Sac à dos", couleur: "bleu" }],
+    listes: [], selection: [], coches: []
+  };
 }
 
-// Remet d'aplomb des données venues d'ailleurs (Firebase, ancien format...)
+// Remet d'aplomb des données venues d'ailleurs (Firebase, ancienne version...)
+// Ex. : un sac créé en v0.1 n'a pas de couleur → on lui en donne une, dans l'ordre.
 function normaliser(d) {
+  const sacs = Array.isArray(d.sacs) ? d.sacs : [];
   return {
-    sacs: Array.isArray(d.sacs) ? d.sacs : [],
+    poches: { couleur: "jaune", ...(d.poches || {}) },
+    sacs: sacs.map((s, i) => ({ ...s, couleur: s.couleur || COULEURS[(i + 1) % COULEURS.length] })),
     listes: Array.isArray(d.listes) ? d.listes.map(l => ({ ...l, objets: Array.isArray(l.objets) ? l.objets : [] })) : [],
     selection: Array.isArray(d.selection) ? d.selection : [],
     coches: Array.isArray(d.coches) ? d.coches : []
@@ -55,14 +64,17 @@ const nouvelId = () => Math.random().toString(36).slice(2, 10);
 // « Clés » et « clés » sont donc le même objet.
 const cle = nom => nom.trim().toLowerCase();
 const $ = id => document.getElementById(id);
+// Planche des icônes (fichier SVG qui contient tous les dessins)
+const PLANCHE = "icones/tabler.svg#";
 // Transforme l'état en texte, toujours dans le même ordre (Firestore peut renvoyer
 // les champs dans un autre ordre) : sert à voir si quelque chose a vraiment changé.
 const enTexte = v => JSON.stringify(v, (k, x) =>
   x && typeof x === "object" && !Array.isArray(x) ? Object.fromEntries(Object.entries(x).sort()) : x);
 
-// Tous les contenants, dans l'ordre : Poches puis mes sacs
-const contenants = () => [POCHES, ...etat.sacs];
-const nomContenant = id => (contenants().find(c => c.id === id) || { nom: "Sans sac" }).nom;
+// Tous les contenants, dans l'ordre : Poches (fixe) puis mes sacs
+const contenants = () => [{ id: "poches", nom: "Poches", ...etat.poches }, ...etat.sacs];
+const SANS_SAC = { id: "?", nom: "Sans sac", couleur: "gris", icone: "point" };
+const nomContenant = id => (contenants().find(c => c.id === id) || SANS_SAC).nom;
 
 // ---------- 2. Stockage ----------
 // Mode démo (adresse se terminant par ?demo) : données gardées dans ce navigateur
@@ -93,6 +105,7 @@ function demarrerFirebase() {
   auth = getAuth(app);
   // Cache local permanent : l'appli fonctionne hors ligne avec la dernière copie connue
   const db = initializeFirestore(app, {
+    ignoreUndefinedProperties: true, // un champ vide ne bloque pas l'enregistrement
     localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() })
   });
 
@@ -148,14 +161,14 @@ async function seConnecter() {
 let metaSynchro = null;
 function majSynchro(meta) {
   if (meta !== undefined) metaSynchro = meta;
-  let etatSynchro = "ok", icone = "#i-nuage-ok", texte = "Synchronisé";
-  if (!navigator.onLine) { etatSynchro = "off"; icone = "#i-nuage-off"; texte = "Hors ligne : les changements seront envoyés au retour du réseau"; }
-  else if (metaSynchro && metaSynchro.hasPendingWrites) { etatSynchro = "attente"; icone = "#i-nuage-attente"; texte = "En attente d'envoi"; }
-  if (MODE_DEMO) { etatSynchro = "off"; icone = "#i-nuage-off"; texte = "Mode démo : pas de synchro"; }
+  let etatSynchro = "ok", ic = "cloud-check", texte = "Synchronisé";
+  if (!navigator.onLine) { etatSynchro = "off"; ic = "cloud-off"; texte = "Hors ligne : les changements seront envoyés au retour du réseau"; }
+  else if (metaSynchro && metaSynchro.hasPendingWrites) { etatSynchro = "attente"; ic = "cloud-up"; texte = "En attente d'envoi"; }
+  if (MODE_DEMO) { etatSynchro = "off"; ic = "cloud-off"; texte = "Mode démo : pas de synchro"; }
   document.querySelectorAll(".synchro").forEach(el => {
     el.className = "synchro " + etatSynchro;
     el.title = texte;
-    el.querySelector("use").setAttribute("href", icone);
+    el.querySelector("use").setAttribute("href", PLANCHE + ic);
   });
 }
 window.addEventListener("online", () => majSynchro());
@@ -189,17 +202,42 @@ function router() {
   else if (h === "reglages") { afficherReglages(); montrer("reglages"); }
   else { afficherAccueil(); montrer("accueil"); }
 }
-window.addEventListener("hashchange", router);
+// En changeant d'écran, on referme une éventuelle grille d'icônes
+window.addEventListener("hashchange", () => { grilleOuverte = null; router(); });
 
 // ---------- 4. Affichage ----------
 
-// Fabrique une icône <svg><use href="#nom"></svg>
+// Fabrique une icône : <svg><use href="icones/tabler.svg#nom"></svg>
 function icone(nom, classe = "") {
-  return `<svg class="ic ${classe}"><use href="#${nom}"></use></svg>`;
+  return `<svg class="ic ${classe}"><use href="${PLANCHE}${nom}"></use></svg>`;
 }
+// Case à cocher carrée (la coche n'apparaît que si la ligne a la classe « coche »)
+const caseACocher = () => `<span class="case">${icone("check")}</span>`;
 // Protège le texte tapé par l'utilisateur avant de l'afficher (évite qu'un « < » casse la page)
 function echapper(t) {
   return String(t).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+// Grille de choix d'icône. Une seule ouverte à la fois ; « grilleOuverte » dit pour qui :
+// "liste" (la liste en cours), "objet:ID" ou "sac:ID" (« sac:poches » pour les poches).
+let grilleOuverte = null;
+function grilleIcones(choisie) {
+  return `<div class="grille-icones">${ICONES_CHOIX.map(n =>
+    `<button type="button" data-icone-choix="${n}" class="${n === choisie ? "choisie" : ""}" aria-label="${n}">${icone(n)}</button>`
+  ).join("")}</div>`;
+}
+
+// Range des objets par contenant, dans l'ordre : Poches, puis les sacs, puis « Sans sac »
+function grouperParContenant(objets) {
+  const ids = contenants().map(c => c.id);
+  return [...contenants(), SANS_SAC].map(c => ({
+    ...c, objets: objets.filter(o => c.id === "?" ? !ids.includes(o.sac) : o.sac === c.id)
+  })).filter(g => g.objets.length);
+}
+
+// Bandeau coloré d'un contenant, avec un compteur à droite
+function bandeau(g, compteur) {
+  return `<h2 class="titre-section coul-${g.couleur}">${icone(iconeContenant(g))}<span class="nom">${echapper(g.nom)}</span><span>${compteur}</span></h2>`;
 }
 
 // --- Écran 1 : accueil ---
@@ -210,24 +248,24 @@ function afficherAccueil() {
 
   $("liste-listes").innerHTML = listes.length ? listes.map(l => {
     const choisie = etat.selection.includes(l.id);
-    return `<li class="ligne ligne-cliquable ${choisie ? "choisie" : ""}" data-choisir="${l.id}">
-      ${icone(choisie ? "i-case-ok" : "i-case", "ic-case")}
+    return `<li class="ligne ligne-cliquable ${choisie ? "coche" : ""}" data-choisir="${l.id}">
+      ${caseACocher()}${icone(iconeListe(l))}
       <span class="nom">${echapper(l.nom)}</span>
-      <span class="nb">${l.objets.length}</span>
-      <button class="btn-icone" data-modifier="${l.id}" aria-label="Modifier ${echapper(l.nom)}">${icone("i-crayon")}</button>
+      <span class="nb">${String(l.objets.length).padStart(2, "0")}</span>
+      <button class="btn-icone" data-modifier="${l.id}" aria-label="Modifier ${echapper(l.nom)}">${icone("pencil")}</button>
     </li>`;
   }).join("") : `<li class="vide">${etat.listes.length ? "Aucune liste trouvée." : "Crée ta première liste, par exemple « Travail » ou « Piscine »."}</li>`;
 
   const n = etat.selection.filter(id => etat.listes.some(l => l.id === id)).length;
   const btn = $("btn-preparer");
   btn.disabled = n === 0;
-  btn.innerHTML = (n === 0 ? "Coche où tu vas" : `Préparer (${n} liste${n > 1 ? "s" : ""})`) + " " + icone("i-fleche");
+  btn.innerHTML = n === 0 ? "Coche où tu vas" : `Préparer <span>[${n}]</span>${icone("arrow-right")}`;
 }
 
 // --- Écran 2 : checklist fusionnée ---
 // Rassemble les objets des listes cochées. Si un objet est dans plusieurs listes,
-// il n'apparaît qu'une fois : son contenant vient de la première liste cochée,
-// et on garde la plus grande quantité.
+// il n'apparaît qu'une fois : son contenant et son icône viennent de la première
+// liste cochée, et on garde la plus grande quantité.
 function fusionner() {
   const parCle = new Map();
   for (const id of etat.selection) {
@@ -237,7 +275,7 @@ function fusionner() {
       const k = cle(o.nom);
       const deja = parCle.get(k);
       if (deja) deja.qte = Math.max(deja.qte || 1, o.qte || 1);
-      else parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac });
+      else parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o) });
     }
   }
   return [...parCle.values()];
@@ -245,31 +283,23 @@ function fusionner() {
 
 function afficherChecklist() {
   const listes = etat.selection.map(id => etat.listes.find(l => l.id === id)).filter(Boolean);
-  $("pastilles").innerHTML = listes.map(l => `<span class="pastille">${echapper(l.nom)}</span>`).join("");
+  $("pastilles").innerHTML = listes.map(l => `<span class="pastille">${icone(iconeListe(l))}${echapper(l.nom)}</span>`).join("");
 
   const objets = fusionner();
-  const pris = objets.filter(o => etat.coches.includes(o.cle)).length;
-  $("compteur").textContent = `${pris} / ${objets.length}`;
+  const estPris = o => etat.coches.includes(o.cle);
+  const pris = objets.filter(estPris).length;
+  $("compteur").textContent = `${pris}/${objets.length}`;
+  $("progression").style.width = objets.length ? `${Math.round(pris / objets.length * 100)}%` : "0";
 
-  // Regroupe par contenant, dans l'ordre : Poches, puis les sacs, puis « Sans sac »
-  const ids = contenants().map(c => c.id);
-  const groupes = [...contenants(), { id: "?", nom: "Sans sac" }].map(c => ({
-    ...c,
-    objets: objets.filter(o => c.id === "?" ? !ids.includes(o.sac) : o.sac === c.id)
-  })).filter(g => g.objets.length);
-
-  $("checklist").innerHTML = groupes.map(g => `
-    <h2 class="titre-section">${icone(g.id === "poches" ? "i-main" : "i-sac")}${echapper(g.nom)}</h2>
-    ${g.objets.map(o => {
-      const ok = etat.coches.includes(o.cle);
-      return `<button class="objet ${ok ? "pris" : ""}" data-cocher="${echapper(o.cle)}">
-        ${icone(ok ? "i-case-ok" : "i-case", "ic-case")}
+  $("checklist").innerHTML = grouperParContenant(objets).map(g =>
+    bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
+    g.objets.map(o => `<button class="objet ${estPris(o) ? "coche" : ""}" data-cocher="${echapper(o.cle)}">
+        ${caseACocher()}${icone(o.icone)}
         <span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
-      </button>`;
-    }).join("")}
-  `).join("")
+      </button>`).join("")
+  ).join("")
     + (objets.length === 0 ? `<p class="vide">Ces listes sont vides. Ajoute des objets avec le crayon sur l'accueil.</p>` : "")
-    + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt, bonne route.</p>` : "");
+    + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
 }
 
 // --- Écran 3 : modifier une liste ---
@@ -286,22 +316,25 @@ function afficherEditionListe(l) {
   listeEnCours = l;
   // Ne pas réécrire le nom pendant que je suis en train de le taper
   if (document.activeElement !== $("nom-liste")) $("nom-liste").value = l.nom;
+  const bouton = $("icone-liste");
+  bouton.dataset.ouvrir = "liste";
+  bouton.innerHTML = icone(iconeListe(l));
+  bouton.classList.toggle("ouvert", grilleOuverte === "liste");
+  $("grille-liste").innerHTML = grilleOuverte === "liste" ? grilleIcones(iconeListe(l)) : "";
 
-  const ids = contenants().map(c => c.id);
-  const groupes = [...contenants(), { id: "?", nom: "Sans sac" }].map(c => ({
-    ...c, objets: l.objets.filter(o => c.id === "?" ? !ids.includes(o.sac) : o.sac === c.id)
-  })).filter(g => g.objets.length);
-
-  $("objets-liste").innerHTML = groupes.map(g => `
-    <h2 class="titre-section">${icone(g.id === "poches" ? "i-main" : "i-sac")}${echapper(g.nom)}</h2>
-    ${g.objets.map(o => `
-      <div class="objet-edit" data-objet="${o.id}">
+  $("objets-liste").innerHTML = grouperParContenant(l.objets).map(g =>
+    bandeau(g, String(g.objets.length).padStart(2, "0")) +
+    g.objets.map(o => {
+      const ouvert = grilleOuverte === "objet:" + o.id;
+      return `<div class="objet-edit" data-objet="${o.id}">
+        <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="objet:${o.id}" aria-label="Changer l'icône">${icone(iconeObjet(o))}</button>
         <input class="e-nom" value="${echapper(o.nom)}" aria-label="Nom de l'objet">
         <select class="e-sac" aria-label="Contenant">${optionsContenants(o.sac)}</select>
         <input class="e-qte" type="number" min="1" max="99" value="${o.qte > 1 ? o.qte : ""}" placeholder="1" aria-label="Quantité">
-        <button class="btn-icone" data-suppr-objet="${o.id}" aria-label="Supprimer">${icone("i-croix")}</button>
-      </div>`).join("")}
-  `).join("") || `<p class="vide">Liste vide. Ajoute ton premier objet en bas.</p>`;
+        <button class="btn-icone" data-suppr-objet="${o.id}" aria-label="Supprimer">${icone("x")}</button>
+      </div>${ouvert ? grilleIcones(iconeObjet(o)) : ""}`;
+    }).join("")
+  ).join("") || `<p class="vide">Liste vide. Ajoute ton premier objet en bas.</p>`;
 
   // Menu du formulaire d'ajout (garde le dernier contenant choisi)
   const sel = $("objet-sac");
@@ -312,16 +345,26 @@ function afficherEditionListe(l) {
 // --- Écran 4 : réglages ---
 function afficherReglages() {
   $("version").textContent = VERSION;
-  $("liste-sacs").innerHTML =
-    `<li class="ligne">${icone("i-main")}<span class="nom">Poches</span><span class="nb">fixe</span></li>` +
-    etat.sacs.map((s, i) => `
-      <li class="ligne" data-sac="${s.id}">
-        ${icone("i-sac")}
-        <input class="nom s-nom" value="${echapper(s.nom)}" aria-label="Nom du sac" style="height:34px">
-        <button class="btn-icone" data-monter="${i}" aria-label="Monter" ${i === 0 ? "disabled" : ""}>${icone("i-haut")}</button>
-        <button class="btn-icone" data-descendre="${i}" aria-label="Descendre" ${i === etat.sacs.length - 1 ? "disabled" : ""}>${icone("i-bas")}</button>
-        <button class="btn-icone" data-suppr-sac="${s.id}" aria-label="Supprimer">${icone("i-poubelle")}</button>
-      </li>`).join("");
+  $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
+  $("liste-sacs").innerHTML = contenants().map((c, i) => {
+    const ouvert = grilleOuverte === "sac:" + c.id;
+    const j = i - 1; // position dans etat.sacs (Poches n'en fait pas partie)
+    const commandes = c.id === "poches"
+      ? `<span class="nom">Poches</span><span class="nb">FIXE</span>`
+      : `<input class="s-nom" value="${echapper(c.nom)}" aria-label="Nom du sac">
+         <button class="btn-icone" data-monter="${j}" aria-label="Monter" ${j === 0 ? "disabled" : ""}>${icone("chevron-up")}</button>
+         <button class="btn-icone" data-descendre="${j}" aria-label="Descendre" ${j === etat.sacs.length - 1 ? "disabled" : ""}>${icone("chevron-down")}</button>
+         <button class="btn-icone" data-suppr-sac="${c.id}" aria-label="Supprimer">${icone("trash")}</button>`;
+    return `<div class="contenant" data-sac="${c.id}">
+      <div class="ligne">
+        <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="sac:${c.id}" aria-label="Changer l'icône">${icone(iconeContenant(c))}</button>
+        ${commandes}
+      </div>
+      <div class="nuancier">${COULEURS.map(k =>
+        `<button type="button" class="coul-${k} ${k === c.couleur ? "choisie" : ""}" data-couleur="${k}" aria-label="Couleur ${k}"></button>`).join("")}</div>
+      ${ouvert ? grilleIcones(iconeContenant(c)) : ""}
+    </div>`;
+  }).join("");
 }
 
 // ---------- 5. Actions ----------
@@ -352,6 +395,9 @@ function supprimerAvecAnnulation(texte, action) {
   afficherToast(texte, () => { etat = avant; sauver(); router(); });
 }
 
+// Première couleur pas encore prise par un contenant (pour un nouveau sac)
+const couleurLibre = () => COULEURS.find(k => !contenants().some(c => c.couleur === k)) || "gris";
+
 // Boutons « Retour » et « Réglages »
 document.querySelectorAll("[data-aller]").forEach(b => b.addEventListener("click", () => {
   if (b.dataset.aller === "accueil") retour(); else aller(b.dataset.aller);
@@ -361,6 +407,33 @@ $("btn-connexion").addEventListener("click", seConnecter);
 $("btn-deconnexion").addEventListener("click", () => {
   if (MODE_DEMO) return;
   if (confirm("Se déconnecter ? Tes données restent en sécurité dans ton compte.")) signOut(auth).then(() => location.reload());
+});
+
+// --- Choix d'icône (valable sur tous les écrans) ---
+document.addEventListener("click", e => {
+  const ouvrir = e.target.closest("[data-ouvrir]");
+  if (ouvrir) {
+    // Toucher l'icône ouvre la grille ; la toucher à nouveau la referme
+    grilleOuverte = grilleOuverte === ouvrir.dataset.ouvrir ? null : ouvrir.dataset.ouvrir;
+    router();
+    return;
+  }
+  const choix = e.target.closest("[data-icone-choix]");
+  if (!choix || !grilleOuverte) return;
+  const nom = choix.dataset.iconeChoix;
+  const [type, id] = grilleOuverte.split(":");
+  if (type === "liste" && listeEnCours) listeEnCours.icone = nom;
+  if (type === "objet" && listeEnCours) {
+    const o = listeEnCours.objets.find(x => x.id === id);
+    if (o) o.icone = nom;
+  }
+  if (type === "sac") {
+    if (id === "poches") etat.poches.icone = nom;
+    else { const s = etat.sacs.find(x => x.id === id); if (s) s.icone = nom; }
+  }
+  grilleOuverte = null;
+  sauver();
+  router();
 });
 
 // --- Accueil ---
@@ -407,6 +480,7 @@ $("nom-liste").addEventListener("change", () => {
   if (!nom) { $("nom-liste").value = listeEnCours.nom; return; }
   listeEnCours.nom = nom;
   sauver();
+  afficherEditionListe(listeEnCours); // l'icône devinée peut changer avec le nom
 });
 $("btn-suppr-liste").addEventListener("click", () => {
   const l = listeEnCours;
@@ -426,6 +500,7 @@ $("form-objet").addEventListener("submit", e => {
     return;
   }
   const qte = parseInt($("objet-qte").value, 10);
+  // Pas d'icône enregistrée : elle sera devinée d'après le nom
   listeEnCours.objets.push({ id: nouvelId(), nom, qte: qte > 1 ? qte : 1, sac: $("objet-sac").value });
   sauver();
   $("objet-nom").value = "";
@@ -445,7 +520,8 @@ $("objets-liste").addEventListener("change", e => {
   const qte = parseInt(ligne.querySelector(".e-qte").value, 10);
   o.qte = qte > 1 ? qte : 1;
   sauver();
-  if (e.target.classList.contains("e-sac")) afficherEditionListe(listeEnCours); // l'objet change de section
+  // Contenant changé : l'objet change de section. Nom changé : l'icône devinée peut changer.
+  if (!e.target.classList.contains("e-qte")) afficherEditionListe(listeEnCours);
 });
 $("objets-liste").addEventListener("click", e => {
   const b = e.target.closest("[data-suppr-objet]");
@@ -457,26 +533,34 @@ $("objets-liste").addEventListener("click", e => {
   });
 });
 
-// --- Réglages : mes sacs ---
+// --- Réglages : contenants ---
 $("form-sac").addEventListener("submit", e => {
   e.preventDefault();
   const nom = $("sac-nom").value.trim();
   if (!nom) return;
-  etat.sacs.push({ id: nouvelId(), nom });
+  etat.sacs.push({ id: nouvelId(), nom, couleur: couleurLibre() });
   sauver();
   $("sac-nom").value = "";
   afficherReglages();
 });
 $("liste-sacs").addEventListener("change", e => {
-  const ligne = e.target.closest("[data-sac]");
-  const s = ligne && etat.sacs.find(x => x.id === ligne.dataset.sac);
+  const bloc = e.target.closest("[data-sac]");
+  const s = bloc && etat.sacs.find(x => x.id === bloc.dataset.sac);
   if (!s) return;
   const nom = e.target.value.trim();
-  if (nom) { s.nom = nom; sauver(); } else e.target.value = s.nom;
+  if (nom) { s.nom = nom; sauver(); afficherReglages(); } else e.target.value = s.nom;
 });
 $("liste-sacs").addEventListener("click", e => {
   const b = e.target.closest("button");
   if (!b) return;
+  const bloc = b.closest("[data-sac]");
+  if (b.dataset.couleur && bloc) {
+    if (bloc.dataset.sac === "poches") etat.poches.couleur = b.dataset.couleur;
+    else { const s = etat.sacs.find(x => x.id === bloc.dataset.sac); if (s) s.couleur = b.dataset.couleur; }
+    sauver();
+    afficherReglages();
+    return;
+  }
   const echanger = (i, j) => { [etat.sacs[i], etat.sacs[j]] = [etat.sacs[j], etat.sacs[i]]; sauver(); afficherReglages(); };
   if (b.dataset.monter) echanger(+b.dataset.monter, +b.dataset.monter - 1);
   else if (b.dataset.descendre) echanger(+b.dataset.descendre, +b.dataset.descendre + 1);
@@ -489,7 +573,9 @@ $("liste-sacs").addEventListener("click", e => {
 });
 
 // ---------- 6. Export / import Excel ----------
-// Fichier : une feuille « Listes » (une ligne par objet) et une feuille « Sacs ».
+// Fichier : feuille « Listes » (une ligne par objet), feuille « Endroits » (icône de
+// chaque liste) et feuille « Sacs » (contenants, couleur, icône).
+// Colonne « Icône » vide = icône devinée automatiquement d'après le nom.
 
 $("btn-export").addEventListener("click", async () => {
   try {
@@ -503,19 +589,26 @@ $("btn-export").addEventListener("click", async () => {
       const rang = sac => { const i = ordre.indexOf(sac); return i < 0 ? 999 : i; }; // « Sans sac » à la fin
       [...l.objets]
         .sort((a, b) => rang(a.sac) - rang(b.sac))
-        .forEach(o => lignes.push({ liste: l.nom, contenant: nomContenant(o.sac), objet: o.nom, qte: o.qte || 1 }));
-      if (!l.objets.length) lignes.push({ liste: l.nom, contenant: "", objet: "", qte: "" }); // garde les listes vides
+        .forEach(o => lignes.push({ liste: l.nom, contenant: nomContenant(o.sac), objet: o.nom, qte: o.qte || 1, icone: o.icone || "" }));
+      if (!l.objets.length) lignes.push({ liste: l.nom, contenant: "", objet: "", qte: "", icone: "" }); // garde les listes vides
     });
     ajouterFeuille(classeur, "Listes", [
       { header: "Liste", key: "liste", width: 22 },
       { header: "Contenant", key: "contenant", width: 18 },
       { header: "Objet", key: "objet", width: 30 },
-      { header: "Quantité", key: "qte", width: 11 }
+      { header: "Quantité", key: "qte", width: 11 },
+      { header: "Icône", key: "icone", width: 16 }
     ], lignes);
+    ajouterFeuille(classeur, "Endroits", [
+      { header: "Liste", key: "liste", width: 26 },
+      { header: "Icône", key: "icone", width: 16 }
+    ], etat.listes.map(l => ({ liste: l.nom, icone: l.icone || "" })));
     ajouterFeuille(classeur, "Sacs", [
       { header: "Ordre", key: "ordre", width: 8 },
-      { header: "Sac", key: "sac", width: 24 }
-    ], etat.sacs.map((s, i) => ({ ordre: i + 1, sac: s.nom })));
+      { header: "Sac", key: "sac", width: 24 },
+      { header: "Couleur", key: "couleur", width: 12 },
+      { header: "Icône", key: "icone", width: 16 }
+    ], contenants().map((c, i) => ({ ordre: i, sac: c.nom, couleur: c.couleur, icone: c.icone || "" })));
     await telechargerClasseur(classeur, NOM_APPLI);
   } catch (err) {
     afficherToast("Export impossible : " + err.message, null);
@@ -532,39 +625,57 @@ $("fichier-import").addEventListener("change", async e => {
     const classeur = await lireClasseur(fichier);
     const lignesListes = lireFeuille(classeur.getWorksheet("Listes"));
     const lignesSacs = lireFeuille(classeur.getWorksheet("Sacs"));
+    const lignesEndroits = lireFeuille(classeur.getWorksheet("Endroits"));
     if (!lignesListes.length) throw new Error("feuille « Listes » introuvable ou vide");
 
-    // Les sacs : on réutilise les identifiants existants quand le nom correspond
+    // On n'accepte que des couleurs et icônes connues (un fichier modifié à la main
+    // pourrait contenir n'importe quoi). Inconnue = on laisse l'appli décider.
+    const avecIcone = (obj, nom) => { if (ICONES_CHOIX.includes(nom)) obj.icone = nom; return obj; };
+    const couleurValide = k => COULEURS.includes(k) ? k : null;
+
+    // Les contenants : on réutilise les identifiants existants quand le nom correspond
+    const poches = { couleur: "jaune" };
     const sacs = [];
     const trouverSac = nom => {
       if (!nom || cle(nom) === "poches") return "poches";
       let s = sacs.find(x => cle(x.nom) === cle(nom));
       if (!s) {
         const ancien = etat.sacs.find(x => cle(x.nom) === cle(nom));
-        s = { id: ancien ? ancien.id : nouvelId(), nom };
+        const prises = [poches.couleur, ...sacs.map(x => x.couleur)];
+        s = { id: ancien ? ancien.id : nouvelId(), nom, couleur: COULEURS.find(k => !prises.includes(k)) || "gris" };
         sacs.push(s);
       }
       return s.id;
     };
-    lignesSacs.forEach(l => trouverSac(l["Sac"]));
+    lignesSacs.forEach(l => {
+      const id = trouverSac(l["Sac"]);
+      const cible = id === "poches" ? poches : sacs.find(x => x.id === id);
+      if (couleurValide(l["Couleur"])) cible.couleur = l["Couleur"];
+      avecIcone(cible, l["Icône"]);
+    });
 
     const listes = [];
-    lignesListes.forEach(l => {
-      const nomListe = l["Liste"];
-      if (!nomListe) return;
+    const trouverListe = nomListe => {
       let liste = listes.find(x => x.nom === nomListe);
       if (!liste) {
         const ancienne = etat.listes.find(x => x.nom === nomListe);
         liste = { id: ancienne ? ancienne.id : nouvelId(), nom: nomListe, objets: [] };
         listes.push(liste);
       }
+      return liste;
+    };
+    lignesEndroits.forEach(l => { if (l["Liste"]) avecIcone(trouverListe(l["Liste"]), l["Icône"]); });
+    lignesListes.forEach(l => {
+      if (!l["Liste"]) return;
+      const liste = trouverListe(l["Liste"]);
       if (l["Objet"] && !liste.objets.some(o => cle(o.nom) === cle(l["Objet"]))) {
         const qte = parseInt(l["Quantité"], 10);
-        liste.objets.push({ id: nouvelId(), nom: l["Objet"], qte: qte > 1 ? qte : 1, sac: trouverSac(l["Contenant"]) });
+        liste.objets.push(avecIcone({ id: nouvelId(), nom: l["Objet"], qte: qte > 1 ? qte : 1, sac: trouverSac(l["Contenant"]) }, l["Icône"]));
       }
     });
 
     supprimerAvecAnnulation(`Import terminé : ${listes.length} liste(s)`, () => {
+      etat.poches = poches;
       etat.sacs = sacs;
       etat.listes = listes;
       etat.selection = etat.selection.filter(id => listes.some(l => l.id === id));
