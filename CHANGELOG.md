@@ -1,5 +1,14 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.0 — 2026-11-05
+Première version stable : tout ce qui a été construit de la v0.1 à la v0.6.
+- Listes par endroit, combinables, rangées par contenant (Poches + sacs colorés), quantités.
+- Préparation : cases à cocher, barre de progression, ajouts / retraits / rangement juste pour une sortie.
+- Mode « ranger » (glisser-déposer) sur tous les écrans.
+- Style brut : carte sur papier quadrillé, icônes partout, une couleur par contenant et par écran.
+- Synchro téléphone / PC (Firebase), hors ligne, mise à jour automatique, export / import Excel.
+- Nouvelle icône : sac blanc + étiquette bleue cochée sur fond jaune, avec un tampon rond (ma signature d'appli).
+
 ## v0.6 — 2026-11-05
 - L'écran est maintenant une carte posée sur un papier quadrillé : petite marge tout autour, cadre épais et ombre décalée.
 - Glisser : la ligne attrapée « se soulève » (un peu plus grande, cadre et ombre décalée).
