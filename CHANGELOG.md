@@ -1,5 +1,9 @@
 # Journal des nouveautés — Stuff to go
 
+## v0.3.1 — 2026-11-05
+- Correction : l'appli installée sur le téléphone pouvait garder l'ancienne version (GitHub laisse les fichiers 10 min en mémoire). Le gardien revérifie maintenant toujours auprès du serveur.
+- Mise à jour automatique : vérification à chaque retour sur l'appli, et rechargement tout seul quand une nouvelle version arrive.
+
 ## v0.3 — 2026-11-05
 - « Nouvelle liste » propose : partir de zéro, ou copier une liste existante (« Concert (copie) »).
 - Suggestions en tapant un objet : l'appli propose ceux de tes autres listes ; en choisir un reprend son contenant et son icône.

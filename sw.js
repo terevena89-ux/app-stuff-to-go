@@ -4,7 +4,7 @@
 // même sans réseau. (Les données, elles, sont gérées par Firebase.)
 // À CHAQUE NOUVELLE VERSION : changer le numéro ci-dessous.
 // =========================================================
-const CACHE = "stuff-to-go-v0.3";
+const CACHE = "stuff-to-go-v0.3.1";
 
 // Fichiers de l'appli à garder dès l'installation
 const FICHIERS = [
@@ -14,8 +14,15 @@ const FICHIERS = [
   "polices/jetbrains-mono-latin-400-normal.woff2", "polices/jetbrains-mono-latin-700-normal.woff2"
 ];
 
+// IMPORTANT : GitHub autorise le téléphone à garder chaque fichier 10 minutes
+// sans revérifier. On demande donc toujours au serveur (« reload » / « no-cache ») ;
+// sinon on risquerait de ranger l'ancienne version sous l'étiquette de la nouvelle.
 self.addEventListener("install", e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FICHIERS)).then(() => self.skipWaiting()));
+  e.waitUntil(
+    caches.open(CACHE)
+      .then(c => c.addAll(FICHIERS.map(f => new Request(f, { cache: "reload" }))))
+      .then(() => self.skipWaiting())
+  );
 });
 
 // Supprime les copies des anciennes versions
@@ -46,9 +53,13 @@ self.addEventListener("fetch", e => {
 
   // Fichiers de l'appli : on essaie d'abord le réseau (pour avoir la dernière version),
   // et si pas de réseau, on prend la copie.
+  // « no-cache » = « vérifie auprès du serveur que c'est la dernière version » :
+  // si rien n'a changé, le serveur répond juste « pareil » (rapide, presque rien à télécharger).
   if (url.origin === location.origin) {
     e.respondWith(
-      fetch(req).then(rep => {
+      // (on passe l'adresse req.url et pas req : le navigateur refuse de modifier
+      // une demande d'ouverture de page)
+      fetch(req.url, { cache: "no-cache" }).then(rep => {
         const clone = rep.clone();
         caches.open(CACHE).then(c => c.put(req, clone));
         return rep;

@@ -25,7 +25,7 @@ import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplif
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v0.3";
+const VERSION = "v0.3.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -843,7 +843,24 @@ $("fichier-import").addEventListener("change", async e => {
 
 // Service worker : permet d'ouvrir l'appli sans réseau et de l'installer
 if ("serviceWorker" in navigator && location.protocol === "https:") {
-  navigator.serviceWorker.register("sw.js");
+  // updateViaCache "none" : pour savoir s'il existe une nouvelle version, toujours
+  // demander sw.js au serveur, jamais à la mémoire du téléphone
+  navigator.serviceWorker.register("sw.js", { updateViaCache: "none" }).then(reg => {
+    // Sur Android, l'appli installée reste souvent ouverte en arrière-plan :
+    // à chaque retour dessus, on vérifie s'il y a une mise à jour
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") reg.update().catch(() => {});
+    });
+  }).catch(() => {}); // pas de gardien possible (navigateur trop ancien...) : l'appli marche quand même
+  // Quand la nouvelle version prend le relais, on recharge la page une fois pour l'afficher
+  // (sauf à la toute première installation, où il n'y avait pas d'ancienne version)
+  const avaitUneVersion = !!navigator.serviceWorker.controller;
+  let dejaRecharge = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => {
+    if (!avaitUneVersion || dejaRecharge) return;
+    dejaRecharge = true;
+    location.reload();
+  });
 }
 
 $("version").textContent = VERSION;
