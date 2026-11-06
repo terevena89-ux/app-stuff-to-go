@@ -22,11 +22,14 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lireFeuille } from "./excel-style.js";
 import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplifier } from "./icones.js";
-import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage, peutVibrer } from "./feeling.js";
+import {
+  aCoche, attrape, lache, lance, toutEstPret, ajoute, contenantFini, cran, toutDecoche,
+  animationsCompletes, lireReglage, changerReglage, peutVibrer
+} from "./feeling.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.3.1";
+const VERSION = "v1.3.2";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -282,9 +285,10 @@ function grouperParContenant(objets) {
   })).filter(g => g.objets.length);
 }
 
-// Bandeau coloré d'un contenant, avec un compteur à droite
-function bandeau(g, compteur) {
-  return `<h2 class="titre-section coul-${g.couleur}" data-sac="${g.id}">${icone(iconeContenant(g))}<span class="nom">${echapper(g.nom)}</span><span>${compteur}</span></h2>`;
+// Bandeau coloré d'un contenant, avec un compteur à droite.
+// « tampon » : le contenant vient d'être terminé, un mini tampon rond (ma signature) s'abat dessus.
+function bandeau(g, compteur, tampon = false) {
+  return `<h2 class="titre-section coul-${g.couleur}" data-sac="${g.id}">${icone(iconeContenant(g))}<span class="nom">${echapper(g.nom)}</span>${tampon ? `<span class="tampon"><i></i></span>` : ""}<span>${compteur}</span></h2>`;
 }
 
 // --- Écran 1 : accueil ---
@@ -376,28 +380,36 @@ function afficherChecklist() {
   // Chaque contenant est rangé dans sa « boîte » (bandeau + objets) : selon l'affichage,
   // la boîte est invisible (liste continue) ou devient un cadre séparé
   // Contenant dont tout est coché : classe « fini » (bandeau pâli, cadre grisé)
+  // Classe d'animation de la ligne qui vient de changer (cochée, décochée, ajoutée)
+  const anim = o => animLigne && animLigne.cle === o.cle ? "vient-" + animLigne.type : "";
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
     `<div class="boite ${!modeRanger && g.objets.every(estPris) ? "fini" : ""}">` +
-    bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
+    bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`, g.id === boiteVientFinie) +
     g.objets.map(o => modeRanger
       // Mode modifier : poignée pour glisser, étiquette « Cette fois », croix pour retirer.
       // Pas de case (on ne coche pas par erreur en modifiant).
-      ? `<div class="objet objet-ranger" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}
+      ? `<div class="objet objet-ranger ${anim(o)}" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}
           ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}
           <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
         </div>`
       // Mode normal : juste cocher
-      : `<div class="objet ${estPris(o) ? "coche" : ""} ${o.cle === vientDeCocher ? "vient-coche" : ""}">
+      : `<div class="objet ${estPris(o) ? "coche" : ""} ${anim(o)}">
           <button class="cocher" data-cocher="${echapper(o.cle)}">${caseACocher()}${icone(o.icone)}${nomEtQte(o)}</button>
         </div>`).join("") +
     `</div>`
   ).join("")
     + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Touche le crayon + en haut pour ajouter un objet.</p>` : "")
     + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
-  vientDeCocher = null; // l'animation de coche ne se joue qu'une fois
+  // Les animations ne se jouent qu'une fois
+  animLigne = null;
+  boiteVientFinie = null;
 }
-// Objet qu'on vient de cocher : seule sa ligne joue l'animation (coche qui se dessine, trait qui barre)
-let vientDeCocher = null;
+// Ligne qui vient de changer : { cle, type } avec type = "coche", "decoche" ou "ajout".
+// Seule cette ligne joue son animation au prochain affichage.
+// (« coche » existe depuis la v1.1 ; « decoche » et « ajout » seulement en animations complètes)
+let animLigne = null;
+// Contenant qu'on vient de terminer : un mini tampon rond s'abat sur son bandeau
+let boiteVientFinie = null;
 
 // --- Écran 3 : modifier une liste ---
 let listeEnCours = null;
@@ -521,12 +533,23 @@ $("reglages-feeling").addEventListener("click", e => {
 function majBoutonsAffichage() {
   document.querySelectorAll("[data-affichage]").forEach(b => b.setAttribute("aria-pressed", b.dataset.affichage === lireReglage("affichage")));
   document.querySelectorAll("[data-theme-choix]").forEach(b => b.setAttribute("aria-pressed", b.dataset.themeChoix === lireReglage("theme")));
+  document.querySelectorAll("[data-anim-choix]").forEach(b => b.setAttribute("aria-pressed", b.dataset.animChoix === lireReglage("animations")));
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-affichage]");
   if (!b) return;
   changerReglage("affichage", b.dataset.affichage);
   router(); // réaffiche l'écran en cours avec le nouvel affichage
+});
+// Choix des animations (complètes / simples). L'attribut data-anim sur la page sert au CSS.
+function appliquerAnimations() { document.documentElement.dataset.anim = lireReglage("animations"); }
+appliquerAnimations();
+$("choix-animations").addEventListener("click", e => {
+  const b = e.target.closest("[data-anim-choix]");
+  if (!b) return;
+  changerReglage("animations", b.dataset.animChoix);
+  appliquerAnimations();
+  majBoutonsAffichage();
 });
 // Choix du thème (auto / clair / sombre) : appliqué tout de suite par le script d'index.html
 $("choix-theme").addEventListener("click", e => {
@@ -581,9 +604,13 @@ $("liste-listes").addEventListener("click", e => {
   // On garde l'ordre dans lequel les listes sont cochées (la première a priorité)
   const coche = !etat.selection.includes(id);
   etat.selection = coche ? [...etat.selection, id] : etat.selection.filter(x => x !== id);
-  aCoche(coche); // même tic (et clic) que dans la checklist
+  aCoche(coche); // même tic que dans la checklist
   sauver();
   afficherAccueil();
+  // Première liste cochée : le bouton « Préparer » s'allume avec un petit saut
+  if (coche && etat.selection.length === 1 && animationsCompletes()) {
+    $("btn-preparer").classList.remove("saute"); void $("btn-preparer").offsetWidth; $("btn-preparer").classList.add("saute");
+  }
 });
 $("btn-preparer").addEventListener("click", () => { lance(); aller("prep"); });
 // Crée une liste (vide, ou copie d'une autre) et l'ouvre, nom prêt à être retapé
@@ -618,11 +645,23 @@ $("checklist").addEventListener("click", e => {
     const k = r.dataset.retirer;
     const o = fusionner().find(x => x.cle === k);
     if (!o) return;
-    supprimerAvecAnnulation(`« ${o.nom} » retiré pour cette sortie`, () => {
+    const retirer = () => supprimerAvecAnnulation(`« ${o.nom} » retiré pour cette sortie`, () => {
       if (o.ponctuel) etat.ponctuel.ajouts = etat.ponctuel.ajouts.filter(x => cle(x.nom) !== k);
       else etat.ponctuel.retraits.push(k);
       etat.coches = etat.coches.filter(x => x !== k);
     });
+    // Animations complètes : la ligne part vers la gauche, puis se referme (les autres remontent)
+    const ligne = r.closest(".objet");
+    if (!animationsCompletes() || !ligne.animate) { retirer(); return; }
+    // Filet de sécurité : si l'animation ne se termine pas (appli en arrière-plan...), on retire quand même
+    let fait = false;
+    const fin = () => { if (!fait) { fait = true; retirer(); } };
+    setTimeout(fin, 500);
+    ligne.animate([{ transform: "none", opacity: 1 }, { transform: "translateX(-110%)", opacity: 0 }], { duration: 220, easing: "ease-in", fill: "forwards" })
+      .onfinish = () => {
+        ligne.animate([{ height: ligne.offsetHeight + "px" }, { height: "0px" }], { duration: 140, easing: "ease-out", fill: "forwards" })
+          .onfinish = fin;
+      };
     return;
   }
   const b = e.target.closest("[data-cocher]");
@@ -630,22 +669,44 @@ $("checklist").addEventListener("click", e => {
   const k = b.dataset.cocher;
   const coche = !etat.coches.includes(k);
   etat.coches = coche ? [...etat.coches, k] : etat.coches.filter(x => x !== k);
-  if (coche) vientDeCocher = k;
-  aCoche(coche); // vibration + clic
+  if (coche) animLigne = { cle: k, type: "coche" };
+  else if (animationsCompletes()) animLigne = { cle: k, type: "decoche" };
+  aCoche(coche); // vibration + tic
+  // Est-ce que ce coup termine un contenant ? Ou toute la liste ?
+  const objets = fusionner();
+  const tout = coche && objets.length && objets.every(o => etat.coches.includes(o.cle));
+  const objet = objets.find(o => o.cle === k);
+  const groupe = objet && grouperParContenant(objets).find(g => g.objets.includes(objet));
+  const groupeFini = coche && !tout && groupe && groupe.objets.every(o => etat.coches.includes(o.cle));
+  if (groupeFini) { contenantFini(); if (animationsCompletes()) boiteVientFinie = groupe.id; }
   sauver();
   afficherChecklist();
+  if (coche && animationsCompletes()) etincelle();
   // Dernier objet coché : bannière « READY TO GO »
-  const objets = fusionner();
-  if (coche && objets.length && objets.every(o => etat.coches.includes(o.cle))) toutEstPret(objets.length);
+  if (tout) toutEstPret(objets.length);
 });
+// Petit éclat jaune au bout de la barre de progression quand elle avance
+function etincelle() {
+  const e = document.createElement("span");
+  e.className = "etincelle";
+  $("progression").appendChild(e);
+  setTimeout(() => e.remove(), 600);
+}
 // « Tout décocher » repart de zéro : coches ET changements « juste pour cette sortie »
 $("btn-tout-decocher").addEventListener("click", () => {
   const p = etat.ponctuel;
   if (!etat.coches.length && !p.ajouts.length && !p.retraits.length && !p.ordre.length && !p.deplaces.length) return;
-  supprimerAvecAnnulation("Préparation remise à zéro", () => {
+  toutDecoche(); // vibration longue et douce
+  const remettre = () => supprimerAvecAnnulation("Préparation remise à zéro", () => {
     etat.coches = [];
     etat.ponctuel = { ajouts: [], retraits: [], ordre: [], deplaces: [] };
   });
+  // Animations complètes : les cases se vident une par une, de haut en bas, puis on remet à zéro
+  const cochees = [...$("checklist").querySelectorAll(".objet.coche")];
+  if (!animationsCompletes() || !cochees.length) { remettre(); return; }
+  const pas = Math.min(70, 600 / cochees.length); // la cascade dure au plus ~0,6 seconde
+  cochees.forEach((l, i) => setTimeout(() => { l.classList.remove("coche", "vient-coche"); l.classList.add("vient-decoche"); }, i * pas));
+  setTimeout(remettre, cochees.length * pas + 200);
 });
 
 // --- Ajouter un objet pendant la préparation ---
@@ -673,6 +734,8 @@ function ajouterPonctuel(obj) {
   } else {
     etat.ponctuel.ajouts.push({ ...obj, id: nouvelId() });
   }
+  ajoute(); // petit « pop »
+  if (animationsCompletes()) animLigne = { cle: k, type: "ajout" }; // la nouvelle ligne apparaît en surbrillance
   sauver();
   $("ponctuel-nom").value = "";
   $("ponctuel-qte").value = "";
@@ -718,6 +781,7 @@ $("form-objet").addEventListener("submit", e => {
   const qte = parseInt($("objet-qte").value, 10);
   // Pas d'icône enregistrée : elle sera devinée d'après le nom
   listeEnCours.objets.push({ id: nouvelId(), nom, qte: qte > 1 ? qte : 1, sac: $("objet-sac").value });
+  ajoute(); // petit « pop »
   sauver();
   $("objet-nom").value = "";
   $("objet-qte").value = "";
@@ -891,6 +955,7 @@ function rendreTriable(conteneur, selecteur, auLacher) {
     // les anime depuis leur ancienne position jusqu'à la nouvelle)
     const voisines = () => [...conteneur.querySelectorAll(selecteur + ", .titre-section")].filter(x => x !== ligne);
     const deplacer = action => {
+      cran(); // tic léger : la ligne passe une autre ligne
       const avant = new Map(voisines().map(x => [x, x.getBoundingClientRect().top]));
       action();
       for (const [x, haut] of avant) {

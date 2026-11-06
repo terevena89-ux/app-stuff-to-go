@@ -1,5 +1,12 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.3.2 — 2026-11-06
+Encore plus de feeling.
+- Sons : « tic de menu » très discret pour cocher (un cran plus bas pour décocher), « pop » en ajoutant un objet, deux notes quand un contenant est terminé, tic léger à chaque cran du glisser.
+- Vibrations : double micro-tic en décochant, « ta-dam » quand un contenant est terminé, crans pendant le glisser, vibration douce sur « Tout décocher ».
+- Animations : décochage à l'envers, mini tampon rond sur le bandeau d'un contenant terminé, ligne retirée qui part sur le côté, objet ajouté en surbrillance, « Tout décocher » en cascade, ligne qui s'enfonce au toucher, étincelle sur la barre de progression, bouton « Préparer » qui saute.
+- Réglages → Animations : Complètes ou Simples (seulement celles d'avant).
+
 ## v1.3.1 — 2026-11-06
 - Réglages plus compact : les contenants (sacs, couleurs, icônes, ordre) sont sur leur propre écran « Mes contenants », ouvert par « Voir mes contenants ».
 
