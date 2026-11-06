@@ -22,11 +22,11 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lireFeuille } from "./excel-style.js";
 import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplifier } from "./icones.js";
-import { aCoche, attrape, lache, toutEstPret, lireReglage, changerReglage, peutVibrer } from "./feeling.js";
+import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage, peutVibrer } from "./feeling.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.1";
+const VERSION = "v1.1.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -537,11 +537,13 @@ $("liste-listes").addEventListener("click", e => {
   if (!ligne) return;
   const id = ligne.dataset.choisir;
   // On garde l'ordre dans lequel les listes sont cochées (la première a priorité)
-  etat.selection = etat.selection.includes(id) ? etat.selection.filter(x => x !== id) : [...etat.selection, id];
+  const coche = !etat.selection.includes(id);
+  etat.selection = coche ? [...etat.selection, id] : etat.selection.filter(x => x !== id);
+  aCoche(coche); // même tic (et clic) que dans la checklist
   sauver();
   afficherAccueil();
 });
-$("btn-preparer").addEventListener("click", () => aller("prep"));
+$("btn-preparer").addEventListener("click", () => { lance(); aller("prep"); });
 // Crée une liste (vide, ou copie d'une autre) et l'ouvre, nom prêt à être retapé
 function creerListe(modele) {
   const l = modele
@@ -825,30 +827,68 @@ function rendreTriable(conteneur, selecteur, auLacher) {
     if (!ligne) return;
     e.preventDefault();
     const doigt = e.pointerId; // on ne suit que ce doigt-là (si un 2e doigt touche l'écran)
+    // Où le doigt a attrapé la ligne (en pixels depuis son bord haut) : on garde
+    // ce décalage pour que la ligne reste « collée » au doigt pendant tout le trajet
+    const prisA = e.clientY - ligne.getBoundingClientRect().top;
+    let decalage = 0; // de combien de pixels la ligne est poussée (vers le bas si positif)
+    let dernierY = e.clientY;
     ligne.classList.add("glisse");
+    ligne.style.pointerEvents = "none"; // pour « voir » la ligne qui est en dessous du doigt
+    ligne.style.transition = "box-shadow .12s"; // pas de retard : la ligne colle au doigt
     attrape(); // petit tic
+
+    // Place la ligne pile sous le doigt. Sa « vraie » place (sans décalage) = sa position
+    // à l'écran moins le décalage actuel ; on calcule le décalage qu'il faut pour suivre le doigt.
+    const suivre = () => {
+      const vraieHaut = ligne.getBoundingClientRect().top - decalage;
+      decalage = dernierY - prisA - vraieHaut;
+      ligne.style.transform = `translateY(${decalage}px) scale(1.04)`;
+    };
+    // Change la ligne de place dans la liste, et fait glisser en douceur les autres lignes
+    // qui bougent (technique « FLIP » : on note où elles étaient, on les déplace, puis on
+    // les anime depuis leur ancienne position jusqu'à la nouvelle)
+    const voisines = () => [...conteneur.querySelectorAll(selecteur + ", .titre-section")].filter(x => x !== ligne);
+    const deplacer = action => {
+      const avant = new Map(voisines().map(x => [x, x.getBoundingClientRect().top]));
+      action();
+      for (const [x, haut] of avant) {
+        const ecart = haut - x.getBoundingClientRect().top;
+        if (ecart) x.animate([{ transform: `translateY(${ecart}px)` }, { transform: "none" }], { duration: 160, easing: "ease-out" });
+      }
+      suivre();
+    };
+
     const bouger = ev => {
       if (ev.pointerId !== doigt) return;
       ev.preventDefault();
+      dernierY = ev.clientY;
       // Défilement automatique près des bords de l'écran
       if (ev.clientY < 80) window.scrollBy(0, -14);
       else if (ev.clientY > innerHeight - 80) window.scrollBy(0, 14);
+      suivre();
       const sous = document.elementFromPoint(ev.clientX, ev.clientY);
       const cible = sous && sous.closest(selecteur + ", .titre-section");
       if (!cible || cible === ligne || !conteneur.contains(cible)) return;
       const r = cible.getBoundingClientRect();
       // Sur un bandeau de contenant : on se place juste en dessous (en tête de ce contenant)
       const apres = cible.classList.contains("titre-section") || ev.clientY > r.top + r.height / 2;
-      if (apres) cible.after(ligne); else cible.before(ligne);
+      if (apres && cible.nextElementSibling !== ligne) deplacer(() => cible.after(ligne));
+      else if (!apres && cible.previousElementSibling !== ligne) deplacer(() => cible.before(ligne));
     };
     const lacher = ev => {
       if (ev.pointerId !== doigt) return;
       document.removeEventListener("pointermove", bouger);
       document.removeEventListener("pointerup", lacher);
       document.removeEventListener("pointercancel", lacher);
-      ligne.classList.remove("glisse");
       lache();
-      auLacher();
+      // La ligne se « pose » : elle revient en douceur à sa place, puis on enregistre
+      ligne.style.transition = "transform .15s ease-out";
+      ligne.style.transform = "translateY(0) scale(1)";
+      setTimeout(() => {
+        ligne.classList.remove("glisse");
+        ligne.style.transform = ligne.style.transition = ligne.style.pointerEvents = "";
+        auLacher();
+      }, 160);
     };
     document.addEventListener("pointermove", bouger, { passive: false });
     document.addEventListener("pointerup", lacher);

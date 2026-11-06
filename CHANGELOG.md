@@ -1,5 +1,9 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.1.1 — 2026-11-06
+- Glisser pour ranger : la ligne suit vraiment le doigt, pixel par pixel, et les autres lignes s'écartent en douceur pour lui faire la place. En lâchant, elle se pose à sa place.
+- Accueil : petit tic (et clic si le son est activé) en cochant une liste, tic plus marqué sur « Préparer ».
+
 ## v1.1 — 2026-11-06
 Le « feeling » : l'appli réagit quand on la touche.
 - Vibration : petit tic en cochant un objet, en attrapant et en lâchant une ligne (mode ranger), vibration plus marquée quand tout est coché.

@@ -75,6 +75,8 @@ export function aCoche(coche) {
 // On attrape ou on lâche une ligne en mode ranger
 export function attrape() { vibrer(12); }
 export function lache() { vibrer(8); }
+// On lance la préparation (bouton « Préparer ») : tic un peu plus marqué
+export function lance() { vibrer(30); }
 
 // Tout est coché : bannière « READY TO GO » qui traverse l'écran + jingle
 export function toutEstPret(nbObjets) {
