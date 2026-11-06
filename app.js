@@ -22,10 +22,11 @@ import {
 import { firebaseConfig } from "./firebase-config.js";
 import { chargerExcelJS, ajouterFeuille, telechargerClasseur, lireClasseur, lireFeuille } from "./excel-style.js";
 import { COULEURS, ICONES_CHOIX, iconeObjet, iconeListe, iconeContenant, simplifier } from "./icones.js";
+import { aCoche, attrape, lache, toutEstPret, lireReglage, changerReglage, peutVibrer } from "./feeling.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.0";
+const VERSION = "v1.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -196,7 +197,17 @@ function retour() { if (aNavigue) history.back(); else location.replace("#"); }
 
 function montrer(nom) {
   document.querySelectorAll(".ecran").forEach(e => { e.hidden = e.id !== "ecran-" + nom; });
-  if (ecranActuel !== nom) window.scrollTo(0, 0);
+  if (ecranActuel !== nom) {
+    window.scrollTo(0, 0);
+    // Petite transition : le nouvel écran glisse depuis la droite
+    // (depuis la gauche quand on revient à l'accueil, comme un « retour »)
+    const e = $("ecran-" + nom);
+    if (ecranActuel) {
+      e.classList.remove("entre-droite", "entre-gauche");
+      void e.offsetWidth; // force le navigateur à relancer l'animation
+      e.classList.add(nom === "accueil" ? "entre-gauche" : "entre-droite");
+    }
+  }
   ecranActuel = nom;
 }
 
@@ -339,25 +350,34 @@ function afficherChecklist() {
   const objets = fusionner();
   const estPris = o => etat.coches.includes(o.cle);
   const pris = objets.filter(estPris).length;
-  $("compteur").textContent = `${pris}/${objets.length}`;
+  const texteCompteur = `${pris}/${objets.length}`;
+  if ($("compteur").textContent && $("compteur").textContent !== texteCompteur) {
+    // Le compteur « saute » un instant quand il change
+    $("compteur").classList.remove("saute"); void $("compteur").offsetWidth; $("compteur").classList.add("saute");
+  }
+  $("compteur").textContent = texteCompteur;
   $("progression").style.width = objets.length ? `${Math.round(pris / objets.length * 100)}%` : "0";
 
   $("btn-ajout-ponctuel").hidden = modeRanger;
-  const nomEtQte = o => `<span class="nom">${echapper(o.nom)}${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
+  // Le nom est dans un <span class="txt"> : c'est lui qu'on « barre » (trait animé)
+  const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
     ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}`;
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
     bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
     g.objets.map(o => modeRanger
       // Mode ranger : ni case ni croix (on ne coche pas par erreur en rangeant)
       ? `<div class="objet objet-ranger" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}</div>`
-      : `<div class="objet ${estPris(o) ? "coche" : ""}">
+      : `<div class="objet ${estPris(o) ? "coche" : ""} ${o.cle === vientDeCocher ? "vient-coche" : ""}">
           <button class="cocher" data-cocher="${echapper(o.cle)}">${caseACocher()}${icone(o.icone)}${nomEtQte(o)}</button>
           <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
         </div>`).join("")
   ).join("")
     + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Ajoute un objet ci-dessous, ou avec le crayon sur l'accueil.</p>` : "")
     + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
+  vientDeCocher = null; // l'animation de coche ne se joue qu'une fois
 }
+// Objet qu'on vient de cocher : seule sa ligne joue l'animation (coche qui se dessine, trait qui barre)
+let vientDeCocher = null;
 
 // --- Écran 3 : modifier une liste ---
 let listeEnCours = null;
@@ -403,6 +423,9 @@ function afficherEditionListe(l) {
 // --- Écran 4 : réglages ---
 function afficherReglages() {
   $("version").textContent = VERSION;
+  // Interrupteurs vibration / son (la ligne vibration est cachée si l'appareil ne sait pas vibrer, ex. PC)
+  $("ligne-vibration").hidden = !peutVibrer;
+  document.querySelectorAll("[data-feeling]").forEach(b => b.setAttribute("aria-pressed", lireReglage(b.dataset.feeling)));
   $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
   $("liste-sacs").innerHTML = contenants().map((c, i) => {
     const ouvert = grilleOuverte === "sac:" + c.id;
@@ -462,6 +485,16 @@ document.querySelectorAll("[data-aller]").forEach(b => b.addEventListener("click
 }));
 
 $("btn-connexion").addEventListener("click", seConnecter);
+// Interrupteurs « Ressenti » : on bascule, puis on fait un essai pour qu'on sente/entende le résultat
+$("reglages-feeling").addEventListener("click", e => {
+  const b = e.target.closest("[data-feeling]");
+  if (!b) return;
+  const nom = b.dataset.feeling;
+  changerReglage(nom, !lireReglage(nom));
+  b.setAttribute("aria-pressed", lireReglage(nom));
+  aCoche(true);
+});
+
 $("btn-deconnexion").addEventListener("click", () => {
   if (MODE_DEMO) return;
   if (confirm("Se déconnecter ? Tes données restent en sécurité dans ton compte.")) signOut(auth).then(() => location.reload());
@@ -551,9 +584,15 @@ $("checklist").addEventListener("click", e => {
   const b = e.target.closest("[data-cocher]");
   if (!b) return;
   const k = b.dataset.cocher;
-  etat.coches = etat.coches.includes(k) ? etat.coches.filter(x => x !== k) : [...etat.coches, k];
+  const coche = !etat.coches.includes(k);
+  etat.coches = coche ? [...etat.coches, k] : etat.coches.filter(x => x !== k);
+  if (coche) vientDeCocher = k;
+  aCoche(coche); // vibration + clic
   sauver();
   afficherChecklist();
+  // Dernier objet coché : bannière « READY TO GO »
+  const objets = fusionner();
+  if (coche && objets.length && objets.every(o => etat.coches.includes(o.cle))) toutEstPret(objets.length);
 });
 // « Tout décocher » repart de zéro : coches ET changements « juste pour cette sortie »
 $("btn-tout-decocher").addEventListener("click", () => {
@@ -787,6 +826,7 @@ function rendreTriable(conteneur, selecteur, auLacher) {
     e.preventDefault();
     const doigt = e.pointerId; // on ne suit que ce doigt-là (si un 2e doigt touche l'écran)
     ligne.classList.add("glisse");
+    attrape(); // petit tic
     const bouger = ev => {
       if (ev.pointerId !== doigt) return;
       ev.preventDefault();
@@ -807,6 +847,7 @@ function rendreTriable(conteneur, selecteur, auLacher) {
       document.removeEventListener("pointerup", lacher);
       document.removeEventListener("pointercancel", lacher);
       ligne.classList.remove("glisse");
+      lache();
       auLacher();
     };
     document.addEventListener("pointermove", bouger, { passive: false });

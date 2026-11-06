@@ -374,3 +374,72 @@ input[type=number] { -moz-appearance: textfield; }
 }
 .toast[hidden] { display: none; }
 .toast button { background: none; border: 0; color: inherit; font: 700 13px var(--mono); text-transform: uppercase; text-decoration: underline; padding: 0; }
+
+/* ---------- Ressenti : animations (v1.1) ---------- */
+/* Transition d'écran : le nouvel écran glisse légèrement en arrivant */
+@keyframes entre-droite { from { transform: translateX(18px); opacity: 0; } }
+@keyframes entre-gauche { from { transform: translateX(-18px); opacity: 0; } }
+.entre-droite { animation: entre-droite .18s ease-out; }
+.entre-gauche { animation: entre-gauche .18s ease-out; }
+
+/* Nom barré par un trait (fond dessiné) : on peut ainsi le faire « glisser » de gauche à droite */
+.objet .txt {
+  background: linear-gradient(currentColor, currentColor) no-repeat 0 55% / 0 2px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone;
+}
+.objet.coche .nom { text-decoration: none; }
+.objet.coche .txt { background-size: 100% 2px; }
+/* Ligne qu'on vient de cocher : la case « pop », la coche se dessine, le trait barre le nom */
+@keyframes case-pop { 40% { transform: scale(1.25); } }
+@keyframes coche-trace { from { stroke-dashoffset: 24; } }
+@keyframes trait-barre { from { background-size: 0 2px; } }
+.vient-coche .case { animation: case-pop .22s ease-out; }
+.vient-coche .case .ic { stroke-dasharray: 24; animation: coche-trace .25s ease-out .05s backwards; }
+.vient-coche .txt { animation: trait-barre .3s ease-out; }
+
+/* Barre de progression qui avance en douceur (léger rebond) + compteur qui saute */
+.progression span { transition: width .45s cubic-bezier(.3, 1.4, .5, 1); }
+@keyframes saute { 40% { transform: scale(1.3); } }
+.compteur { display: inline-block; }
+.compteur.saute { animation: saute .25s ease-out; }
+
+/* Bannière « READY TO GO » : traverse l'écran quand tout est coché.
+   Couleurs fixes (noir + jaune de l'icône), lisibles en thème clair comme sombre. */
+@keyframes banniere-entre { from { transform: translateX(-100%); } }
+.banniere-fin {
+  position: fixed; left: 0; right: 0; top: 38%; z-index: 20; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 12px;
+  background: #111; color: #FAC775;
+  border-block: var(--trait) solid #FAC775;
+  font-family: var(--mono);
+  animation: banniere-entre .35s cubic-bezier(.2, 1.4, .5, 1);
+  transition: transform .3s ease-in;
+}
+.banniere-fin .gros { font-size: 24px; font-weight: 700; letter-spacing: 3px; }
+.banniere-fin .petit { font-size: 12px; color: #fff; letter-spacing: 1px; }
+.banniere-fin.sort { transform: translateX(100%); }
+
+/* Interrupteurs (Réglages → Ressenti) : ligne entière à toucher, bascule carrée à droite */
+.interrupteur {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px; min-height: 44px; background: none; border: 0;
+  border-bottom: 1px solid var(--fin); text-align: left;
+}
+.interrupteur[hidden] { display: none; }
+.interrupteur .nom { flex: 1; min-width: 0; }
+.bascule {
+  position: relative; width: 40px; height: 22px; flex-shrink: 0;
+  border: var(--trait) solid var(--encre); background: var(--fond);
+}
+.bascule::after {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
+  background: var(--discret); transition: transform .15s ease-out, background .15s;
+}
+.interrupteur[aria-pressed="true"] .bascule { background: #FAC775; }
+.interrupteur[aria-pressed="true"] .bascule::after { transform: translateX(18px); background: #111; }
+
+/* Si le téléphone demande « moins d'animations », on les coupe toutes */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}

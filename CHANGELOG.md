@@ -1,5 +1,14 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.1 — 2026-11-06
+Le « feeling » : l'appli réagit quand on la touche.
+- Vibration : petit tic en cochant un objet, en attrapant et en lâchant une ligne (mode ranger), vibration plus marquée quand tout est coché.
+- Son (coupé par défaut) : clic mécanique sec en cochant, jingle 8-bit quand tout est coché.
+- Quand le dernier objet est coché : bannière « READY TO GO » qui traverse l'écran.
+- Animations : la case « pop » et la coche se dessine, le trait barre le nom en glissant, la barre de progression avance avec un léger rebond, le compteur saute, les écrans glissent en arrivant.
+- Réglages → Ressenti : interrupteurs Vibration et Son, gardés sur chaque appareil (pas synchronisés). La ligne Vibration est cachée sur PC.
+- Si le téléphone demande « moins d'animations », elles sont coupées.
+
 ## v1.0 — 2026-11-05
 Première version stable : tout ce qui a été construit de la v0.1 à la v0.6.
 - Listes par endroit, combinables, rangées par contenant (Poches + sacs colorés), quantités.
