@@ -1,14 +1,14 @@
 // =========================================================
 // Le « feeling » de l'appli : vibrations, petits sons, effet de fin.
-// Les réglages (vibration oui/non, son oui/non, affichage de la checklist) sont gardés sur CET appareil
+// Les réglages (vibration, son, affichage de la checklist, thème) sont gardés sur CET appareil
 // seulement (localStorage), pas synchronisés : le PC ne vibre pas, et on peut
 // vouloir du son sur l'un et pas sur l'autre.
 // =========================================================
 
 const CLE = "stuff-feeling";
 
-// Par défaut : vibration activée, son coupé, checklist en cadres séparés par contenant
-let reglages = { vibration: true, son: false, affichage: "cadres" };
+// Par défaut : vibration activée, son coupé, checklist en cadres séparés par contenant, thème auto
+let reglages = { vibration: true, son: false, affichage: "cadres", theme: "auto" };
 try { Object.assign(reglages, JSON.parse(localStorage.getItem(CLE)) || {}); } catch (e) { /* rien : on garde les valeurs par défaut */ }
 
 export function lireReglage(nom) { return reglages[nom]; }

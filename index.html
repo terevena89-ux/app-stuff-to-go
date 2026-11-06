@@ -5,9 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Stuff to go</title>
   <meta name="description" content="Mes checklists d'affaires à prendre selon l'endroit où je vais.">
-  <!-- Couleur de la barre du téléphone, selon le thème clair/sombre -->
-  <meta name="theme-color" content="#f4f3ee" media="(prefers-color-scheme: light)">
-  <meta name="theme-color" content="#151515" media="(prefers-color-scheme: dark)">
+  <!-- Couleur de la barre du téléphone (mise à jour par le script ci-dessous) -->
+  <meta name="theme-color" content="#f4f3ee">
+  <script>
+    // Thème choisi sur cet appareil (Réglages → Thème) : auto, clair ou sombre.
+    // On l'applique AVANT l'affichage de la page, pour éviter un « flash » blanc.
+    // En « auto », on suit le réglage du téléphone/PC, même s'il change pendant qu'on utilise l'appli.
+    (function () {
+      var choix = "auto";
+      try { choix = (JSON.parse(localStorage.getItem("stuff-feeling")) || {}).theme || "auto"; } catch (e) {}
+      var sombreTel = matchMedia("(prefers-color-scheme: dark)");
+      function appliquer() {
+        var theme = choix === "auto" ? (sombreTel.matches ? "sombre" : "clair") : choix;
+        document.documentElement.dataset.theme = theme;
+        document.querySelector('meta[name="theme-color"]').content = theme === "sombre" ? "#171c24" : "#f4f3ee";
+      }
+      appliquer();
+      sombreTel.addEventListener("change", appliquer);
+      window.appliquerTheme = function (nouveau) { choix = nouveau; appliquer(); };
+    })();
+  </script>
   <link rel="manifest" href="manifest.json">
   <link rel="icon" href="icones/icone.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="icones/icone-192.png">
@@ -130,6 +147,15 @@
   </form>
 
   <h2 class="section"><span>Ressenti</span><span>CET APPAREIL</span></h2>
+  <!-- Thème : suivre le téléphone (auto) ou forcer clair / sombre -->
+  <div class="ligne-choix">
+    <span class="nom">Thème</span>
+    <div id="choix-theme" class="segments">
+      <button data-theme-choix="auto">Auto</button>
+      <button data-theme-choix="clair">Clair</button>
+      <button data-theme-choix="sombre">Sombre</button>
+    </div>
+  </div>
   <!-- Affichage de l'écran « Check en cours » : 3 choix -->
   <div class="ligne-choix">
     <span class="nom">Check en cours</span>

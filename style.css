@@ -21,26 +21,15 @@
   --pris: #a3a19a;         /* objets déjà pris */
   --quadrillage: #e3e1d8;  /* carreaux du papier autour de l'écran */
   --danger: #b3261e;
+  --ligne: #111111;        /* couleur des traits épais (= encre en clair) */
+  --ombre-c: #111111;      /* couleur des ombres décalées */
   --trait: 2.5px;          /* épaisseur des traits « brut » */
   --ombre: 3px;            /* décalage de l'ombre des boutons */
   --texte: "Space Grotesk", system-ui, sans-serif;
   --mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
-  color-scheme: light dark;
+  color-scheme: light;
 }
 
-/* Thème sombre : couleurs atténuées pour ne pas éblouir */
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fond: #151515;
-    --carte: #1d1d1c;
-    --encre: #cfcdc6;
-    --discret: #8f8d86;
-    --fin: #343432;
-    --pris: #5c5b57;
-    --quadrillage: #222221;
-    --danger: #f2b8b5;
-  }
-}
 
 /* ---------- Les 8 couleurs de contenants ----------
    --cf = couleur du fond, --ct = couleur du texte posé dessus */
@@ -52,16 +41,33 @@
 .coul-violet    { --cf: #AFA9EC; --ct: #26215C; }
 .coul-turquoise { --cf: #5DCAA5; --ct: #04342C; }
 .coul-gris      { --cf: #B4B2A9; --ct: #2C2C2A; }
-@media (prefers-color-scheme: dark) {
-  .coul-jaune     { --cf: #633806; --ct: #FAEEDA; }
-  .coul-bleu      { --cf: #0C447C; --ct: #E6F1FB; }
-  .coul-vert      { --cf: #27500A; --ct: #EAF3DE; }
-  .coul-corail    { --cf: #712B13; --ct: #FAECE7; }
-  .coul-rose      { --cf: #72243E; --ct: #FBEAF0; }
-  .coul-violet    { --cf: #3C3489; --ct: #EEEDFE; }
-  .coul-turquoise { --cf: #085041; --ct: #E1F5EE; }
-  .coul-gris      { --cf: #444441; --ct: #F1EFE8; }
+
+/* ---------- Thème sombre « ardoise + pastel » (v1.3.0) ----------
+   Activé par l'attribut data-theme="sombre" sur la page, posé par le petit script
+   en haut d'index.html : selon le réglage du tel (Auto), ou forcé dans Réglages.
+   Surfaces gris-bleu calmes, traits discrets, ombres plus sombres que le fond,
+   bandeaux pastel adoucis avec texte foncé dessus. */
+:root[data-theme="sombre"] {
+  --fond: #171c24;
+  --carte: #1f2531;
+  --encre: #dfe4ec;        /* texte */
+  --discret: #8b95a7;
+  --fin: #2b3342;
+  --pris: #586274;
+  --quadrillage: #1d2230;
+  --danger: #f2b8b5;
+  --ligne: #39445a;        /* traits épais : discrets, plus du tout beige clair */
+  --ombre-c: #0a0d12;      /* ombres : plus sombres que le fond, comme une vraie ombre */
+  color-scheme: dark;
 }
+[data-theme="sombre"] .coul-jaune     { --cf: #D9B577; --ct: #2a1c06; }
+[data-theme="sombre"] .coul-bleu      { --cf: #93B2CF; --ct: #102438; }
+[data-theme="sombre"] .coul-vert      { --cf: #A3BD7C; --ct: #1a2a0c; }
+[data-theme="sombre"] .coul-corail    { --cf: #D9A08A; --ct: #3a1508; }
+[data-theme="sombre"] .coul-rose      { --cf: #D5A0B4; --ct: #3a1222; }
+[data-theme="sombre"] .coul-violet    { --cf: #ABA6D6; --ct: #1e1a4a; }
+[data-theme="sombre"] .coul-turquoise { --cf: #82C2AC; --ct: #062a22; }
+[data-theme="sombre"] .coul-gris      { --cf: #A9A7A0; --ct: #24231f; }
 
 * { box-sizing: border-box; }
 
@@ -95,8 +101,8 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--carte);
-  border: var(--trait) solid var(--encre);
-  box-shadow: 5px 5px 0 var(--encre);
+  border: var(--trait) solid var(--ligne);
+  box-shadow: 5px 5px 0 var(--ombre-c);
 }
 @media (min-width: 560px) { .ecran { --marge: 20px; } }
 .ecran[hidden] { display: none; }
@@ -113,7 +119,7 @@ body {
 .barre {
   display: flex; align-items: center; gap: 6px;
   padding: calc(8px + env(safe-area-inset-top)) 10px 8px;
-  border-bottom: var(--trait) solid var(--encre);
+  border-bottom: var(--trait) solid var(--ligne);
   position: sticky; top: 0; z-index: 3;
   /* Une couleur par écran (classe coul-... dans index.html) : on sait où on est d'un coup d'œil */
   background: var(--cf, var(--carte)); color: var(--ct, var(--encre));
@@ -133,7 +139,7 @@ body {
 .synchro.off .ic { stroke-width: 2.4; }
 
 /* Barre de progression (checklist) */
-.progression { height: 10px; background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
+.progression { height: 10px; background: var(--fond); border-bottom: var(--trait) solid var(--ligne); }
 .progression span { display: block; height: 100%; background: var(--encre); transition: width .2s; }
 
 /* ---------- Boutons ---------- */
@@ -148,14 +154,14 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .btn, .btn-principal {
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   min-height: 44px; padding: 0 14px;
-  border: var(--trait) solid var(--encre); border-radius: 0;
+  border: var(--trait) solid var(--ligne); border-radius: 0;
   background: var(--carte); color: var(--encre);
   font: 700 14px var(--mono); text-transform: uppercase; letter-spacing: .03em;
-  box-shadow: var(--ombre) var(--ombre) 0 var(--encre);
+  box-shadow: var(--ombre) var(--ombre) 0 var(--ombre-c);
   transition: transform .06s, box-shadow .06s;
 }
 .btn-principal { background: var(--cf); color: var(--ct); }
-.btn:active, .btn-principal:active { transform: translate(var(--ombre), var(--ombre)); box-shadow: 0 0 0 var(--encre); }
+.btn:active, .btn-principal:active { transform: translate(var(--ombre), var(--ombre)); box-shadow: 0 0 0 var(--ombre-c); }
 .btn-principal:disabled { background: var(--fond); color: var(--discret); box-shadow: none; cursor: default; transform: none; }
 .large { width: 100%; }
 
@@ -163,7 +169,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .pied {
   margin-top: auto; padding: 12px 13px 13px 10px;
   position: sticky; bottom: 0; background: var(--carte);
-  border-top: var(--trait) solid var(--encre);
+  border-top: var(--trait) solid var(--ligne);
 }
 
 /* ---------- Lignes (accueil, objets, contenants) ---------- */
@@ -186,7 +192,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 /* Case à cocher carrée (dessinée en CSS) */
 .case {
   width: 18px; height: 18px; flex-shrink: 0;
-  border: 2px solid var(--encre);
+  border: 2px solid var(--ligne);
   display: flex; align-items: center; justify-content: center;
 }
 .case .ic { width: 14px; height: 14px; stroke-width: 3; opacity: 0; }
@@ -206,19 +212,19 @@ button { font: inherit; color: inherit; cursor: pointer; }
   position: relative; z-index: 4;
   background: var(--carte);
   transform: scale(1.04);
-  outline: var(--trait) solid var(--encre); outline-offset: -2px;
-  box-shadow: 5px 5px 0 var(--encre);
+  outline: var(--trait) solid var(--ligne); outline-offset: -2px;
+  box-shadow: 5px 5px 0 var(--ombre-c);
   cursor: grabbing;
 }
 
 /* Menu « Partir de zéro / Copier » sous « Nouvelle liste » */
-.choix-nouvelle:not(:empty) { background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
+.choix-nouvelle:not(:empty) { background: var(--fond); border-bottom: var(--trait) solid var(--ligne); }
 .choix-nouvelle .ligne-ajout { color: var(--encre); padding-left: 24px; }
 #btn-nouvelle-liste.ouvert { color: var(--encre); font-weight: 700; }
 
 /* Suggestions au-dessus du champ « Objet à ajouter » */
 .suggestions:empty { display: none; }
-.suggestions { display: flex; flex-direction: column; border: var(--trait) solid var(--encre); }
+.suggestions { display: flex; flex-direction: column; border: var(--trait) solid var(--ligne); }
 .suggestion {
   display: flex; align-items: center; gap: 8px; padding: 6px 8px;
   background: var(--carte); border: 0; border-bottom: 1px solid var(--fin); text-align: left;
@@ -227,7 +233,7 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .suggestion .nom { flex: 1; min-width: 0; }
 .etiquette {
   font: 700 10px var(--mono); text-transform: uppercase;
-  padding: 2px 5px; background: var(--cf); color: var(--ct); border: 1.5px solid var(--encre);
+  padding: 2px 5px; background: var(--cf); color: var(--ct); border: 1.5px solid var(--ligne);
 }
 
 /* ---------- Recherche ---------- */
@@ -238,12 +244,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 }
 
 /* ---------- Checklist ---------- */
-.pastilles { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; border-bottom: var(--trait) solid var(--encre); }
+.pastilles { display: flex; flex-wrap: wrap; gap: 6px; padding: 6px 10px; border-bottom: var(--trait) solid var(--ligne); }
 .pastilles:empty { display: none; }
 .pastille {
   display: inline-flex; align-items: center; gap: 4px;
   font: 700 11px var(--mono); text-transform: uppercase;
-  padding: 2px 6px; border: 2px solid var(--encre);
+  padding: 2px 6px; border: 2px solid var(--ligne);
 }
 .pastille .ic { width: 14px; height: 14px; }
 
@@ -252,12 +258,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
   display: flex; align-items: center; gap: 8px; margin: 0;
   padding: 4px 10px;
   background: var(--cf, var(--fond)); color: var(--ct, var(--encre));
-  border-bottom: var(--trait) solid var(--encre);
+  border-bottom: var(--trait) solid var(--ligne);
   font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em;
 }
 .titre-section .nom { flex: 1; }
 .titre-section .ic { width: 17px; height: 17px; stroke-width: 2; }
-* + .titre-section { border-top: var(--trait) solid var(--encre); }
+* + .titre-section { border-top: var(--trait) solid var(--ligne); }
 
 /* Une ligne d'objet = une grande zone à toucher pour cocher + une croix pour retirer */
 .objet { display: flex; align-items: center; border-bottom: 1px solid var(--fin); }
@@ -295,12 +301,12 @@ button { font: inherit; color: inherit; cursor: pointer; }
 .objet-edit .e-qte { width: 32px; font: 700 13px var(--mono); text-align: center; }
 /* Bouton-icône qui ouvre la grille de choix */
 .choix-icone { background: none; border: 2px solid transparent; padding: 5px; display: flex; color: var(--encre); }
-.choix-icone.ouvert { border-color: var(--encre); background: var(--fond); }
+.choix-icone.ouvert { border-color: var(--ligne); background: var(--fond); }
 
 /* Grille de choix d'icône */
 .grille-icones {
   display: grid; grid-template-columns: repeat(auto-fill, minmax(42px, 1fr));
-  border-top: var(--trait) solid var(--encre); border-bottom: var(--trait) solid var(--encre);
+  border-top: var(--trait) solid var(--ligne); border-bottom: var(--trait) solid var(--ligne);
   background: var(--fond);
 }
 .grille-icones button {
@@ -314,11 +320,11 @@ button { font: inherit; color: inherit; cursor: pointer; }
   margin-top: auto; padding: 10px;
   position: sticky; bottom: 0; background: var(--carte);
   display: flex; flex-direction: column; gap: 8px;
-  border-top: var(--trait) solid var(--encre);
+  border-top: var(--trait) solid var(--ligne);
 }
 .form-ajout[hidden] { display: none; }
 /* Dans la checklist, le formulaire reste à sa place (c'est le bouton du bas qui est collé) */
-.form-ponctuel { margin-top: 0; position: static; background: var(--fond); border-bottom: var(--trait) solid var(--encre); }
+.form-ponctuel { margin-top: 0; position: static; background: var(--fond); border-bottom: var(--trait) solid var(--ligne); }
 #btn-ajout-ponctuel.ouvert { color: var(--encre); font-weight: 700; }
 .option-liste { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--discret); }
 .option-liste input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--encre); flex-shrink: 0; }
@@ -330,27 +336,27 @@ button { font: inherit; color: inherit; cursor: pointer; }
 
 input, select {
   font: inherit; color: var(--encre); background: var(--carte);
-  border: 2px solid var(--encre); border-radius: 0;
+  border: 2px solid var(--ligne); border-radius: 0;
   height: 44px; padding: 0 8px; min-width: 0;
 }
-input:focus, select:focus { outline: 2px solid var(--encre); outline-offset: 1px; }
+input:focus, select:focus { outline: 2px solid var(--ligne); outline-offset: 1px; }
 input[type=number] { -moz-appearance: textfield; }
 
 /* ---------- Réglages ---------- */
 .section {
   margin: 0; padding: 4px 10px;
-  background: var(--fond); border-bottom: var(--trait) solid var(--encre);
+  background: var(--fond); border-bottom: var(--trait) solid var(--ligne);
   font: 700 12px var(--mono); text-transform: uppercase; letter-spacing: .06em;
   display: flex; justify-content: space-between;
 }
-* + .section { border-top: var(--trait) solid var(--encre); }
+* + .section { border-top: var(--trait) solid var(--ligne); }
 .aide { color: var(--discret); font-size: 13px; margin: 0; padding: 8px 10px 4px; }
 .contenant { border-bottom: 1px solid var(--fin); }
 .contenant .ligne { border-bottom: 0; padding-left: 4px; }
 .contenant .s-nom { flex: 1; min-width: 0; height: 36px; border-color: transparent; background: transparent; padding: 0 4px; }
 .nuancier { display: flex; gap: 6px; padding: 0 10px 10px 46px; }
-.nuancier button { width: 24px; height: 24px; padding: 0; background: var(--cf); border: 2px solid var(--encre); }
-.nuancier button.choisie { outline: 2px solid var(--encre); outline-offset: 2px; }
+.nuancier button { width: 24px; height: 24px; padding: 0; background: var(--cf); border: 2px solid var(--ligne); }
+.nuancier button.choisie { outline: 2px solid var(--ligne); outline-offset: 2px; }
 .boutons { display: flex; gap: 10px; flex-wrap: wrap; padding: 12px 13px 13px 10px; }
 .boutons .btn { flex: 1; }
 #form-sac { padding: 10px; border-bottom: 1px solid var(--fin); }
@@ -369,7 +375,7 @@ input[type=number] { -moz-appearance: textfield; }
   bottom: calc(84px + env(safe-area-inset-bottom));
   display: flex; align-items: center; gap: 14px;
   background: var(--encre); color: var(--carte);
-  border: var(--trait) solid var(--encre);
+  border: var(--trait) solid var(--ligne);
   padding: 10px 14px; font-size: 14px; z-index: 10; max-width: calc(100% - 24px);
 }
 .toast[hidden] { display: none; }
@@ -430,7 +436,7 @@ input[type=number] { -moz-appearance: textfield; }
 .interrupteur .nom { flex: 1; min-width: 0; }
 .bascule {
   position: relative; width: 40px; height: 22px; flex-shrink: 0;
-  border: var(--trait) solid var(--encre); background: var(--fond);
+  border: var(--trait) solid var(--ligne); background: var(--fond);
 }
 .bascule::after {
   content: ""; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px;
@@ -446,14 +452,14 @@ input[type=number] { -moz-appearance: textfield; }
 
 /* ---------- Check en cours : 3 affichages (choisis dans Réglages, v1.2) ---------- */
 /* Liste : les boîtes sont invisibles, les contenants se suivent (comme avant) */
-.aff-liste .boite + .boite .titre-section { border-top: var(--trait) solid var(--encre); }
+.aff-liste .boite + .boite .titre-section { border-top: var(--trait) solid var(--ligne); }
 /* Cadres : chaque contenant devient une petite carte séparée, sur le fond de l'écran */
 .aff-cadres, .aff-colonnes { padding: 10px; background: var(--fond); }
 .aff-cadres { display: grid; gap: 12px; }
 .aff-cadres .boite, .aff-colonnes .boite {
   background: var(--carte);
-  border: var(--trait) solid var(--encre);
-  box-shadow: var(--ombre) var(--ombre) 0 var(--encre);
+  border: var(--trait) solid var(--ligne);
+  box-shadow: var(--ombre) var(--ombre) 0 var(--ombre-c);
 }
 .aff-cadres .boite .objet:last-child, .aff-colonnes .boite .objet:last-child { border-bottom: 0; }
 /* 2 colonnes : les cadres se rangent en deux colonnes, sans se couper en deux */
@@ -476,19 +482,19 @@ input[type=number] { -moz-appearance: textfield; }
 /* Réglages : choix de l'affichage, en 3 boutons collés */
 .ligne-choix { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--fin); }
 .ligne-choix .nom { flex: 1; min-width: 0; }
-.segments { display: flex; border: var(--trait) solid var(--encre); }
+.segments { display: flex; border: var(--trait) solid var(--ligne); }
 .segments button {
   background: var(--carte); border: 0; padding: 5px 8px;
   font: 700 12px var(--mono); text-transform: uppercase;
 }
-.segments button + button { border-left: 2px solid var(--encre); }
+.segments button + button { border-left: 2px solid var(--ligne); }
 .segments button[aria-pressed="true"] { background: #FAC775; color: #111; }
 
 /* Check en cours, mode modifier : « Tout décocher » caché, choix de l'affichage visible (v1.2.1) */
 .pied[hidden], .barre-affichage[hidden] { display: none; }
 .barre-affichage {
   display: flex; align-items: center; gap: 10px; padding: 6px 10px;
-  border-bottom: var(--trait) solid var(--encre);
+  border-bottom: var(--trait) solid var(--ligne);
   font: 700 11px var(--mono); text-transform: uppercase; color: var(--discret);
 }
 .barre-affichage span { flex: 1; }

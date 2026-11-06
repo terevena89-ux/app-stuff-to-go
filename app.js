@@ -26,7 +26,7 @@ import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.2.1";
+const VERSION = "v1.3.0";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -519,12 +519,21 @@ $("reglages-feeling").addEventListener("click", e => {
 // mêmes boutons dans Réglages et dans Check en cours (mode modifier)
 function majBoutonsAffichage() {
   document.querySelectorAll("[data-affichage]").forEach(b => b.setAttribute("aria-pressed", b.dataset.affichage === lireReglage("affichage")));
+  document.querySelectorAll("[data-theme-choix]").forEach(b => b.setAttribute("aria-pressed", b.dataset.themeChoix === lireReglage("theme")));
 }
 document.addEventListener("click", e => {
   const b = e.target.closest("[data-affichage]");
   if (!b) return;
   changerReglage("affichage", b.dataset.affichage);
   router(); // réaffiche l'écran en cours avec le nouvel affichage
+});
+// Choix du thème (auto / clair / sombre) : appliqué tout de suite par le script d'index.html
+$("choix-theme").addEventListener("click", e => {
+  const b = e.target.closest("[data-theme-choix]");
+  if (!b) return;
+  changerReglage("theme", b.dataset.themeChoix);
+  window.appliquerTheme(b.dataset.themeChoix);
+  majBoutonsAffichage();
 });
 
 $("btn-deconnexion").addEventListener("click", () => {
