@@ -550,3 +550,84 @@ input[type=number] { -moz-appearance: textfield; }
 /* Ligne qui s'enfonce légèrement au toucher (pas en animations simples) */
 :root:not([data-anim="simples"]) .objet .cocher { transition: transform .08s ease-out; }
 :root:not([data-anim="simples"]) .objet .cocher:active { transform: scale(.97); }
+
+/* ---------- v1.4 : accueil en cadres, météo, facultatifs, fenêtres ---------- */
+/* Accueil : mêmes cadres que Check en cours (cadre Météo, Endroits, Toujours proposés) */
+.accueil-cadres { padding: 10px; }
+.accueil-cadres .lignes { margin: 0; }
+.aide-cadre { margin: 0; padding: 8px 10px; font-size: 13px; color: var(--discret); line-height: 1.4; }
+.detail-bandeau { font-weight: 400; text-transform: none; letter-spacing: 0; }
+/* Cadre Météo : à gauche la carte (icône + température), à droite les pastilles en grille */
+.meteo-corps { display: flex; align-items: center; gap: 12px; padding: 10px; }
+.meteo-carte { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; }
+.ic-meteo { width: 38px; height: 38px; stroke-width: 1.5; }
+.temp { font: 700 28px/1 var(--mono); }
+.temp-detail { font-size: 12px; color: var(--discret); line-height: 1.35; }
+.lien-cadre { background: none; border: 0; padding: 0; text-align: left; color: var(--encre); text-decoration: underline; font-size: 13px; }
+.pastilles-meteo { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; flex-shrink: 0; }
+.pastille-meteo {
+  display: flex; align-items: center; gap: 4px; padding: 5px 7px;
+  font: 700 11px var(--mono); text-transform: uppercase;
+  background: var(--carte); border: 2px solid var(--ligne);
+}
+.pastille-meteo .ic { width: 15px; height: 15px; }
+.pastille-meteo.active { background: #85B7EB; color: #042C53; box-shadow: 2px 2px 0 var(--ombre-c); }
+/* Pastille météo dans Check en cours (à côté des listes cochées) */
+.pastille-meteo-mini { background: #85B7EB; color: #042C53; }
+/* Dans « Spécial Météo » : petite étiquette avec le vrai contenant (où ranger l'objet) */
+.etiquette-ou {
+  font: 700 9px var(--mono); text-transform: uppercase; white-space: nowrap;
+  padding: 1px 4px; border: 1.5px solid var(--fin); color: var(--discret);
+}
+/* Sous-titres du cadre Spécial Météo dans « Modifier une liste » (« Si pluie »...) */
+.sous-meteo {
+  display: flex; align-items: center; gap: 5px; padding: 5px 10px 3px;
+  font: 700 10px var(--mono); text-transform: uppercase; color: var(--discret);
+  background: var(--fond); border-bottom: 1px solid var(--fin);
+}
+.sous-meteo .ic { width: 14px; height: 14px; }
+/* Modifier une liste : toute la ligne se touche pour ouvrir la fenêtre */
+.objet-liste { cursor: pointer; }
+#objets-liste { padding: 10px; }
+.source { margin-left: auto; font: 700 9px var(--mono); text-transform: uppercase; color: var(--discret); }
+
+/* Fenêtres par-dessus l'écran (fond assombri, boîte au centre) */
+.fenetre {
+  position: fixed; inset: 0; z-index: 30;
+  background: rgba(10, 12, 16, .5);
+  display: flex; align-items: center; justify-content: center;
+  padding: calc(12px + env(safe-area-inset-top)) 12px calc(12px + env(safe-area-inset-bottom));
+}
+.fenetre[hidden] { display: none; }
+.fenetre-boite {
+  width: 100%; max-width: 460px; max-height: 100%; overflow-y: auto;
+  background: var(--carte); border: var(--trait) solid var(--ligne); box-shadow: 5px 5px 0 var(--ombre-c);
+  margin: 0;
+}
+@keyframes fenetre-entre { from { transform: translateY(14px) scale(.98); opacity: 0; } }
+:root:not([data-anim="simples"]) .fenetre:not([hidden]) .fenetre-boite { animation: fenetre-entre .16s ease-out; }
+.fenetre-titre {
+  display: flex; align-items: center; gap: 8px; margin: 0; padding: 9px 10px;
+  background: var(--cf); color: var(--ct); border-bottom: var(--trait) solid var(--ligne);
+  font-size: 16px;
+}
+.fenetre-titre .nom { flex: 1; }
+.fenetre-boutons { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; padding: 10px; }
+#liste-facultatifs .ligne { width: 100%; background: none; border: 0; border-bottom: 1px solid var(--fin); text-align: left; }
+.champ-fenetre { padding: 10px 10px 4px; display: flex; flex-direction: column; gap: 6px; }
+.champ-fenetre input { width: 100%; }
+.ligne-fenetre { display: flex; align-items: center; gap: 10px; padding: 7px 10px; border-bottom: 1px solid var(--fin); }
+.ligne-fenetre[hidden] { display: none; }
+.etiquette-champ { font: 700 10px var(--mono); text-transform: uppercase; color: var(--discret); width: 76px; flex-shrink: 0; }
+.compteur-qte { display: flex; align-items: center; gap: 6px; font: 700 15px var(--mono); }
+.compteur-qte .btn-icone { border: 2px solid var(--ligne); padding: 3px; }
+/* Segments qui passent à la ligne (contenants, météos) */
+.segments-libres { flex-wrap: wrap; border: 0; gap: 5px; }
+.segments-libres button { border: 2px solid var(--ligne); }
+.segments-libres button + button { border-left: 2px solid var(--ligne); }
+
+/* Réglages → Météo : ville et seuils */
+.valeur { font: 700 12px var(--mono); text-align: right; }
+.seuils { display: grid; gap: 6px; padding: 8px 10px; }
+.seuils label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.seuils input { width: 64px; height: 32px; font: 700 13px var(--mono); text-align: center; }

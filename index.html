@@ -56,9 +56,17 @@
     <button class="btn-icone btn-ranger" data-ranger="modifier" aria-label="Modifier"></button>
     <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
   </header>
-  <ul id="liste-listes" class="lignes"></ul>
-  <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Nouvelle liste</button>
-  <div id="choix-nouvelle" class="choix-nouvelle"></div>
+  <!-- Accueil en cadres séparés (comme Check en cours) : météo, endroits, toujours proposés -->
+  <div class="aff-cadres accueil-cadres">
+    <div id="cadre-meteo" class="boite"></div>
+    <div class="boite">
+      <h2 class="titre-section coul-jaune"><svg class="ic"><use href="icones/tabler.svg#map-pin"></use></svg><span class="nom">Endroits</span><span id="nb-endroits"></span></h2>
+      <ul id="liste-listes" class="lignes"></ul>
+      <button id="btn-nouvelle-liste" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Nouvelle liste</button>
+      <div id="choix-nouvelle" class="choix-nouvelle"></div>
+    </div>
+    <div id="cadre-toujours" class="boite"></div>
+  </div>
   <div class="pied">
     <button id="btn-preparer" class="btn-principal coul-jaune large"></button>
   </div>
@@ -87,6 +95,8 @@
   <div id="checklist"></div>
   <!-- Ajouter un objet pendant la préparation (juste cette fois, ou aussi dans une liste) -->
   <button id="btn-ajout-ponctuel" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Ajouter pour cette sortie</button>
+  <!-- Mode modifier : rouvrir la fenêtre « Tu prends aussi ? » -->
+  <button id="btn-facultatifs" class="ligne-ajout" hidden><svg class="ic"><use href="icones/tabler.svg#square-check"></use></svg><span>Facultatifs</span></button>
   <form id="form-ponctuel" class="form-ajout form-ponctuel" autocomplete="off" hidden>
     <div id="suggestions-ponctuel" class="suggestions"></div>
     <input id="ponctuel-nom" placeholder="Objet (ou cherche dans tes listes)" required>
@@ -107,27 +117,18 @@
 </section>
 
 <!-- ============ ÉCRAN 3 : MODIFIER UNE LISTE ============ -->
+<!-- Même modèle que Check en cours en mode modifier : un cadre par contenant (+ « Spécial Météo »),
+     poignée pour glisser, croix pour retirer. Toucher un objet ouvre la fenêtre « Modifier l'objet ». -->
 <section id="ecran-liste" class="ecran" hidden>
   <header class="barre coul-vert">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <button id="icone-liste" class="choix-icone" aria-label="Changer l'icône de la liste"></button>
     <input id="nom-liste" class="titre-modifiable" aria-label="Nom de la liste">
-    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
     <button id="btn-suppr-liste" class="btn-icone" aria-label="Supprimer la liste"><svg class="ic"><use href="icones/tabler.svg#trash"></use></svg></button>
   </header>
   <div id="grille-liste"></div>
-  <div id="objets-liste"></div>
-  <!-- Formulaire d'ajout, toujours en bas -->
-  <form id="form-objet" class="form-ajout" autocomplete="off">
-    <!-- Suggestions : objets déjà présents dans mes autres listes -->
-    <div id="suggestions" class="suggestions"></div>
-    <input id="objet-nom" placeholder="Objet à ajouter (ou cherche dans tes listes)" required>
-    <div class="form-ligne">
-      <select id="objet-sac" aria-label="Contenant"></select>
-      <input id="objet-qte" type="number" min="1" max="99" placeholder="Qté" aria-label="Quantité">
-      <button class="btn-principal coul-jaune" aria-label="Ajouter"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
-    </div>
-  </form>
+  <div id="objets-liste" class="aff-cadres"></div>
+  <button id="btn-ajout-objet" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Ajouter un objet</button>
 </section>
 
 <!-- ============ ÉCRAN 4 : RÉGLAGES ============ -->
@@ -140,6 +141,25 @@
   <h2 class="section"><span>Contenants</span><span id="nb-contenants"></span></h2>
   <!-- Les contenants ont leur propre écran (#contenants), pour garder Réglages compact -->
   <button class="ligne-ajout" data-aller="contenants"><svg class="ic"><use href="icones/tabler.svg#backpack"></use></svg>Voir mes contenants<svg class="ic fleche-droite"><use href="icones/tabler.svg#arrow-right"></use></svg></button>
+
+  <h2 class="section"><span>Météo</span><span>AUTO</span></h2>
+  <!-- Ville utilisée pour la météo du jour (on n'utilise jamais le GPS) -->
+  <div class="ligne-choix">
+    <span class="nom">Ville</span>
+    <span id="ville-actuelle" class="valeur"></span>
+  </div>
+  <form id="form-ville" class="form-ligne" autocomplete="off">
+    <input id="ville-nom" placeholder="Chercher une ville (ex. Lyon)" required>
+    <button class="btn-principal coul-turquoise" aria-label="Chercher"><svg class="ic"><use href="icones/tabler.svg#search"></use></svg></button>
+  </form>
+  <div id="villes-trouvees"></div>
+  <!-- Seuils : à partir de quand la météo auto coche Pluie / Froid / Chaud / Vent -->
+  <div class="seuils">
+    <label>Pluie si risque ≥ <input type="number" id="seuil-pluie" min="0" max="100" step="5"> %</label>
+    <label>Froid si mini ≤ <input type="number" id="seuil-froid" min="-30" max="30"> °</label>
+    <label>Chaud si maxi ≥ <input type="number" id="seuil-chaud" min="10" max="45"> °</label>
+    <label>Vent si rafales ≥ <input type="number" id="seuil-vent" min="10" max="150" step="5"> km/h</label>
+  </div>
 
   <h2 class="section"><span>Ressenti</span><span>CET APPAREIL</span></h2>
   <!-- Thème : suivre le téléphone (auto) ou forcer clair / sombre -->
@@ -203,6 +223,50 @@
     <button class="btn-principal coul-jaune" aria-label="Ajouter le sac"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
   </form>
 </section>
+
+<!-- ============ FENÊTRES (par-dessus l'écran) ============ -->
+<!-- « Tu prends aussi ? » : les facultatifs, proposés après « Préparer » -->
+<div id="fenetre-facultatifs" class="fenetre" hidden>
+  <div class="fenetre-boite" role="dialog" aria-labelledby="titre-facultatifs">
+    <h2 id="titre-facultatifs" class="fenetre-titre coul-turquoise"><span class="nom">Tu prends aussi ?</span><span id="nb-facultatifs"></span></h2>
+    <div id="liste-facultatifs"></div>
+    <div class="fenetre-boutons">
+      <button id="btn-fac-aucun" class="btn">Aucun</button>
+      <button id="btn-fac-valider" class="btn-principal coul-turquoise"></button>
+    </div>
+  </div>
+</div>
+
+<!-- Ajouter / modifier un objet d'une liste -->
+<div id="fenetre-objet" class="fenetre" hidden>
+  <form id="form-fenetre-objet" class="fenetre-boite" role="dialog" aria-labelledby="titre-objet" autocomplete="off">
+    <h2 id="titre-objet" class="fenetre-titre coul-vert"><span class="nom"></span></h2>
+    <div class="champ-fenetre">
+      <input id="fo-nom" placeholder="Nom de l'objet (ou cherche dans tes listes)" aria-label="Nom de l'objet" required>
+      <div id="fo-suggestions" class="suggestions"></div>
+    </div>
+    <div class="ligne-fenetre"><span class="etiquette-champ">Quantité</span>
+      <div class="compteur-qte">
+        <button type="button" class="btn-icone" data-qte="-1" aria-label="Moins"><svg class="ic"><use href="icones/tabler.svg#minus"></use></svg></button>
+        <span id="fo-qte">1</span>
+        <button type="button" class="btn-icone" data-qte="1" aria-label="Plus"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
+      </div>
+    </div>
+    <div class="ligne-fenetre"><span class="etiquette-champ">Contenant</span><div id="fo-sac" class="segments segments-libres"></div></div>
+    <div class="ligne-fenetre"><span class="etiquette-champ">Météo</span><div id="fo-meteo" class="segments segments-libres"></div></div>
+    <div id="ligne-fo-facultatif" class="ligne-fenetre"><span class="etiquette-champ">Facultatif</span>
+      <div id="fo-facultatif" class="segments"><button type="button" data-fac="non">Non</button><button type="button" data-fac="oui">Oui</button></div>
+    </div>
+    <div class="ligne-fenetre"><span class="etiquette-champ">Icône</span>
+      <button type="button" id="fo-icone" class="choix-icone" aria-label="Changer l'icône"></button>
+    </div>
+    <div id="fo-grille"></div>
+    <div class="fenetre-boutons">
+      <button type="button" id="fo-supprimer" class="btn" aria-label="Supprimer l'objet"><svg class="ic"><use href="icones/tabler.svg#trash"></use></svg></button>
+      <button class="btn-principal coul-vert">OK</button>
+    </div>
+  </form>
+</div>
 
 <!-- Petit message en bas de l'écran (« Élément supprimé — Annuler ») -->
 <div id="toast" class="toast" hidden>

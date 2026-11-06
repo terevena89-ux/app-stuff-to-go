@@ -26,22 +26,31 @@ import {
   aCoche, attrape, lache, lance, toutEstPret, ajoute, contenantFini, cran, toutDecoche,
   animationsCompletes, lireReglage, changerReglage, peutVibrer
 } from "./feeling.js";
+import { METEOS, nomMeteo, SEUILS_DEFAUT, rechercherVille, chargerMeteo, evaluer, iconeTemps } from "./meteo.js";
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.3.2";
+const VERSION = "v1.4.0";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
 //   poches    : réglages du contenant fixe « Poches »     { couleur, icone }
 //   sacs      : mes sacs, dans l'ordre d'affichage        [{ id, nom, couleur, icone }]
-//   listes    : mes listes par endroit                    [{ id, nom, icone, objets: [{ id, nom, qte, sac, icone }] }]
+//   listes    : mes listes par endroit                    [{ id, nom, icone, objets: [objet] }]
+//               objet = { id, nom, qte, sac, icone, meteo, facultatif }
+//               meteo : vide = toujours ; sinon "pluie", "froid"... = seulement si cette météo est cochée
+//               facultatif : true = proposé dans la fenêtre « Tu prends aussi ? »
+//   toujours  : liste spéciale « Toujours proposés » (objets facultatifs à chaque sortie) { objets: [objet] }
+//   meteo     : { ville: { nom, detail, lat, lon } ou null, seuils: { pluie, froid, chaud, vent },
+//                 jour: "AAAA-MM-JJ", choix: [météos cochées à la main ce jour-là] ou null (= auto) }
 //   selection : les listes cochées sur l'accueil, dans l'ordre où je les ai cochées
 //   coches    : les objets déjà pris (par leur nom en minuscules)
 //   ponctuel  : changements « juste pour cette sortie », effacés par « Tout décocher »
 //               { ajouts: [objets en plus], retraits: [noms en minuscules des objets enlevés],
-//                 ordre: [noms dans l'ordre rangé], deplaces: [{ cle, sac }] (sac changé en rangeant) }
+//                 ordre: [noms dans l'ordre rangé], deplaces: [{ cle, sac }] (sac changé en rangeant),
+//                 facultatifs: [noms des facultatifs pris aujourd'hui], vus: [facultatifs déjà proposés] }
 // Les « icone » sont facultatives : sans choix de ma part, l'appli devine d'après le nom.
+const ponctuelVide = () => ({ ajouts: [], retraits: [], ordre: [], deplaces: [], facultatifs: [], vus: [] });
 let etat = etatVide();
 
 function etatVide() {
@@ -49,7 +58,9 @@ function etatVide() {
     poches: { couleur: "jaune" },
     sacs: [{ id: "sac-a-dos", nom: "Sac à dos", couleur: "bleu" }],
     listes: [], selection: [], coches: [],
-    ponctuel: { ajouts: [], retraits: [], ordre: [], deplaces: [] }
+    toujours: { objets: [] },
+    meteo: { ville: null, seuils: { ...SEUILS_DEFAUT }, jour: "", choix: null },
+    ponctuel: ponctuelVide()
   };
 }
 
@@ -57,17 +68,28 @@ function etatVide() {
 // Ex. : un sac créé en v0.1 n'a pas de couleur → on lui en donne une, dans l'ordre.
 function normaliser(d) {
   const sacs = Array.isArray(d.sacs) ? d.sacs : [];
+  const tableau = v => Array.isArray(v) ? v : [];
+  const m = d.meteo || {};
   return {
     poches: { couleur: "jaune", ...(d.poches || {}) },
     sacs: sacs.map((s, i) => ({ ...s, couleur: s.couleur || COULEURS[(i + 1) % COULEURS.length] })),
-    listes: Array.isArray(d.listes) ? d.listes.map(l => ({ ...l, objets: Array.isArray(l.objets) ? l.objets : [] })) : [],
-    selection: Array.isArray(d.selection) ? d.selection : [],
-    coches: Array.isArray(d.coches) ? d.coches : [],
+    listes: tableau(d.listes).map(l => ({ ...l, objets: tableau(l.objets) })),
+    selection: tableau(d.selection),
+    coches: tableau(d.coches),
+    toujours: { objets: tableau(d.toujours?.objets) },
+    meteo: {
+      ville: m.ville && typeof m.ville.lat === "number" ? m.ville : null,
+      seuils: { ...SEUILS_DEFAUT, ...(m.seuils || {}) },
+      jour: m.jour || "",
+      choix: Array.isArray(m.choix) ? m.choix : null
+    },
     ponctuel: {
-      ajouts: Array.isArray(d.ponctuel?.ajouts) ? d.ponctuel.ajouts : [],
-      retraits: Array.isArray(d.ponctuel?.retraits) ? d.ponctuel.retraits : [],
-      ordre: Array.isArray(d.ponctuel?.ordre) ? d.ponctuel.ordre : [],
-      deplaces: Array.isArray(d.ponctuel?.deplaces) ? d.ponctuel.deplaces : []
+      ajouts: tableau(d.ponctuel?.ajouts),
+      retraits: tableau(d.ponctuel?.retraits),
+      ordre: tableau(d.ponctuel?.ordre),
+      deplaces: tableau(d.ponctuel?.deplaces),
+      facultatifs: tableau(d.ponctuel?.facultatifs),
+      vus: tableau(d.ponctuel?.vus)
     }
   };
 }
@@ -89,6 +111,26 @@ const enTexte = v => JSON.stringify(v, (k, x) =>
 const contenants = () => [{ id: "poches", nom: "Poches", ...etat.poches }, ...etat.sacs];
 const SANS_SAC = { id: "?", nom: "Sans sac", couleur: "gris", icone: "point" };
 const nomContenant = id => (contenants().find(c => c.id === id) || SANS_SAC).nom;
+// Cadre à part « Spécial Météo » : les objets marqués pluie, froid... s'y rangent
+// (ils gardent quand même leur vrai contenant, affiché en petite étiquette)
+// Nom réservé de « Toujours proposés » dans le fichier Excel
+const NOM_TOUJOURS = "(Toujours proposés)";
+const SPECIAL_METEO = { id: "meteo", nom: "Spécial Météo", couleur: "turquoise", icone: "umbrella" };
+// La liste spéciale « Toujours proposés » se modifie comme une liste normale (#liste=toujours)
+const listeToujours = () => ({ id: "toujours", nom: "Toujours proposés", objets: etat.toujours.objets, special: true });
+const trouverListe = id => id === "toujours" ? listeToujours() : etat.listes.find(l => l.id === id);
+
+// --- Météo du jour ---
+// Date du jour « AAAA-MM-JJ » (heure du téléphone)
+const aujourdhui = () => { const d = new Date(); return new Date(d - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10); };
+let meteoDonnees = null;   // dernière météo reçue d'Open-Meteo (ou null)
+let meteoEtat = "";        // "", "chargement", "erreur"
+// Météos cochées : mon choix à la main du jour s'il existe, sinon ce que dit la météo auto
+function meteosActives() {
+  const m = etat.meteo;
+  if (m.jour === aujourdhui() && m.choix) return m.choix;
+  return meteoDonnees && meteoDonnees.jour === aujourdhui() ? evaluer(meteoDonnees, m.seuils) : [];
+}
 
 // ---------- 2. Stockage ----------
 // Mode démo (adresse se terminant par ?demo) : données gardées dans ce navigateur
@@ -143,6 +185,7 @@ function demarrerFirebase() {
       etat = recu;
       dernierJSON = json;
       router();
+      majMeteo(); // la ville a pu changer (ou c'est le premier chargement)
     });
   });
 }
@@ -153,6 +196,7 @@ function demarrerDemo() {
   $("compte-info").textContent = "Mode démo : données gardées sur cet appareil seulement.";
   majSynchro(null);
   router();
+  majMeteo();
 }
 
 async function seConnecter() {
@@ -220,7 +264,7 @@ function router() {
   const h = location.hash.slice(1);
   if (h === "prep") { afficherChecklist(); montrer("checklist"); }
   else if (h.startsWith("liste=")) {
-    const l = etat.listes.find(x => x.id === h.slice(6));
+    const l = trouverListe(h.slice(6));
     if (!l) { location.replace("#"); return; }
     afficherEditionListe(l); montrer("liste");
   }
@@ -233,8 +277,11 @@ window.addEventListener("hashchange", () => {
   grilleOuverte = null;
   choixNouvelleOuvert = false;
   modeRanger = false;
-  $("suggestions").innerHTML = "";
   $("suggestions-ponctuel").innerHTML = "";
+  // Les fenêtres se ferment aussi (ex. bouton retour du téléphone)
+  $("fenetre-objet").hidden = true;
+  fenetreObjet = null;
+  $("fenetre-facultatifs").hidden = true;
   $("form-ponctuel").hidden = true;
   $("btn-ajout-ponctuel").classList.remove("ouvert");
   router();
@@ -277,12 +324,22 @@ function grilleIcones(choisie) {
   ).join("")}</div>`;
 }
 
-// Range des objets par contenant, dans l'ordre : Poches, puis les sacs, puis « Sans sac »
-function grouperParContenant(objets) {
+// Range des objets par contenant, dans l'ordre : Poches, puis les sacs, puis « Sans sac »,
+// et enfin « Spécial Météo » pour les objets marqués d'une météo.
+// avecMeteoVide : garder le cadre Spécial Météo même vide (écran Modifier, pour y glisser des objets)
+function grouperParContenant(objets, avecMeteoVide = false) {
   const ids = contenants().map(c => c.id);
-  return [...contenants(), SANS_SAC].map(c => ({
-    ...c, objets: objets.filter(o => c.id === "?" ? !ids.includes(o.sac) : o.sac === c.id)
+  const normaux = objets.filter(o => !o.meteo);
+  const groupes = [...contenants(), SANS_SAC].map(c => ({
+    ...c, objets: normaux.filter(o => c.id === "?" ? !ids.includes(o.sac) : o.sac === c.id)
   })).filter(g => g.objets.length);
+  const meteo = objets.filter(o => o.meteo);
+  if (meteo.length || avecMeteoVide) {
+    // Dans le cadre météo, on range par météo (pluie, puis froid...), dans l'ordre des METEOS
+    const rang = o => METEOS.findIndex(m => m.id === o.meteo);
+    groupes.push({ ...SPECIAL_METEO, objets: meteo.map((o, i) => [o, i]).sort((a, b) => rang(a[0]) - rang(b[0]) || a[1] - b[1]).map(x => x[0]) });
+  }
+  return groupes;
 }
 
 // Bandeau coloré d'un contenant, avec un compteur à droite.
@@ -318,9 +375,56 @@ function afficherAccueil() {
   $("btn-nouvelle-liste").classList.toggle("ouvert", choixNouvelleOuvert);
 
   const n = etat.selection.filter(id => etat.listes.some(l => l.id === id)).length;
+  $("nb-endroits").textContent = n ? String(n) : "";
+  const nm = meteosActives().length;
   const btn = $("btn-preparer");
   btn.disabled = n === 0;
-  btn.innerHTML = n === 0 ? "Coche où tu vas" : `Préparer <span>[${n}]</span>${icone("arrow-right")}`;
+  btn.innerHTML = n === 0 ? "Coche où tu vas" : `Préparer <span>[${n}${nm ? ` + ${nm} météo` : ""}]</span>${icone("arrow-right")}`;
+
+  afficherCadreMeteo();
+  // Cadre « Toujours proposés » : ses objets reviennent dans « Tu prends aussi ? » à chaque sortie.
+  // Le crayon (mode modifier) ouvre la liste pour la changer.
+  const t = etat.toujours.objets;
+  $("cadre-toujours").innerHTML = `<h2 class="titre-section coul-gris">${icone("refresh")}<span class="nom">Toujours proposés</span>
+      ${modeRanger ? `<button class="btn-icone" data-modifier="toujours" aria-label="Modifier Toujours proposés">${icone("pencil")}</button>` : `<span>${t.length}</span>`}</h2>
+    <p class="aide-cadre">${t.length ? t.map(o => echapper(o.nom)).join(" · ") : "Objets proposés à chaque sortie (batterie externe, livre…). Crayon + pour en ajouter."}</p>`;
+}
+
+// Cadre Météo de l'accueil : grande icône + température, et les pastilles à cocher.
+// Les pastilles sont pré-cochées par la météo auto ; les toucher = je corrige à la main.
+function afficherCadreMeteo() {
+  const m = etat.meteo;
+  const actives = meteosActives();
+  const auto = !(m.jour === aujourdhui() && m.choix);
+  const d = meteoDonnees && meteoDonnees.jour === aujourdhui() ? meteoDonnees : null;
+  let corps;
+  if (!m.ville) corps = `<button class="lien-cadre" data-aller="reglages">Choisis ta ville dans Réglages pour la météo auto</button>`;
+  else if (d) corps = `${icone(iconeTemps(d), "ic-meteo")}<div><div class="temp">${d.actuelle}°</div>
+      <div class="temp-detail">min ${d.min}° · max ${d.max}°<br>pluie ${d.pluie} %${d.rafales >= 30 ? ` · vent ${d.rafales} km/h` : ""}</div></div>`;
+  else corps = `<span class="temp-detail">${meteoEtat === "chargement" ? "Météo en cours de chargement…" : "Météo indisponible : coche à la main."}</span>`;
+  // « Neige » n'apparaît que s'il neige (auto) ou si je l'ai cochée : 4 pastilles d'habitude
+  const montrees = METEOS.filter(x => x.id !== "neige" || actives.includes("neige"));
+  $("cadre-meteo").innerHTML = `<h2 class="titre-section coul-turquoise">${icone("sun")}<span class="nom">Météo</span>
+      <span class="detail-bandeau">${m.ville ? echapper(m.ville.nom) + (auto ? " · auto" : " · à la main") : ""}</span></h2>
+    <div class="meteo-corps"><div class="meteo-carte">${corps}</div>
+      <div class="pastilles-meteo">${montrees.map(x =>
+        `<button class="pastille-meteo ${actives.includes(x.id) ? "active" : ""}" data-meteo="${x.id}" aria-pressed="${actives.includes(x.id)}">${icone(x.icone)}${x.nom}</button>`).join("")}</div></div>`;
+}
+
+// Va chercher la météo du jour (au démarrage, et quand on revient sur l'appli)
+async function majMeteo() {
+  const ville = etat.meteo.ville;
+  if (!ville) { meteoDonnees = null; return; }
+  if (meteoDonnees && meteoDonnees.villeCle === ville.lat + "," + ville.lon && meteoDonnees.jour === aujourdhui() && Date.now() - meteoDonnees.recu < 60 * 60 * 1000) return;
+  meteoEtat = "chargement";
+  if (ecranActuel === "accueil") afficherCadreMeteo();
+  try {
+    meteoDonnees = { ...(await chargerMeteo(ville)), villeCle: ville.lat + "," + ville.lon, recu: Date.now() };
+    meteoEtat = "";
+  } catch (e) {
+    meteoEtat = "erreur";
+  }
+  router();
 }
 
 // --- Écran 2 : checklist fusionnée ---
@@ -329,16 +433,21 @@ function afficherAccueil() {
 // liste cochée, et on garde la plus grande quantité.
 // Ensuite on applique les changements « juste pour cette sortie » : on enlève les
 // objets retirés, et on ajoute les objets en plus (marqués « ponctuel »).
+// Objets météo : seulement si leur météo est cochée. Objets facultatifs : seulement si
+// je les ai pris dans la fenêtre « Tu prends aussi ? ».
 function fusionner() {
   const parCle = new Map();
-  for (const id of etat.selection) {
-    const l = etat.listes.find(x => x.id === id);
-    if (!l) continue;
+  const meteos = meteosActives();
+  const pris = etat.ponctuel.facultatifs;
+  const sources = [...etat.selection.map(id => etat.listes.find(x => x.id === id)).filter(Boolean), listeToujours()];
+  for (const l of sources) {
     for (const o of l.objets) {
       const k = cle(o.nom);
+      if (o.meteo && !meteos.includes(o.meteo)) continue;
+      if ((o.facultatif || l.special) && !pris.includes(k)) continue;
       const deja = parCle.get(k);
       if (deja) deja.qte = Math.max(deja.qte || 1, o.qte || 1);
-      else parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o) });
+      else parCle.set(k, { cle: k, nom: o.nom, qte: o.qte || 1, sac: o.sac, icone: iconeObjet(o), meteo: o.meteo || "" });
     }
   }
   etat.ponctuel.retraits.forEach(k => parCle.delete(k));
@@ -352,9 +461,36 @@ function fusionner() {
   return [...parCle.values()].sort((a, b) => rang(a.cle) - rang(b.cle));
 }
 
+// Les facultatifs à proposer dans « Tu prends aussi ? » : ceux des listes cochées
+// (si leur météo est cochée) et ceux de « Toujours proposés », sans doublon, et sans
+// ceux qui sont de toute façon déjà à prendre (présents sans « facultatif » ailleurs).
+// « source » = d'où il vient (nom de la liste, de la météo, ou « Général »).
+function candidatsFacultatifs() {
+  const meteos = meteosActives();
+  const listes = etat.selection.map(id => etat.listes.find(x => x.id === id)).filter(Boolean);
+  const obligatoires = new Set();
+  listes.forEach(l => l.objets.forEach(o => {
+    if (!o.facultatif && (!o.meteo || meteos.includes(o.meteo))) obligatoires.add(cle(o.nom));
+  }));
+  const res = new Map();
+  [...listes, listeToujours()].forEach(l => l.objets.forEach(o => {
+    const k = cle(o.nom);
+    if (!(o.facultatif || l.special) || (o.meteo && !meteos.includes(o.meteo))) return;
+    if (obligatoires.has(k) || res.has(k)) return;
+    res.set(k, { cle: k, nom: o.nom, icone: iconeObjet(o), source: l.special ? "Général" : o.meteo ? nomMeteo(o.meteo) : l.nom });
+  }));
+  return [...res.values()];
+}
+
 function afficherChecklist() {
   const listes = etat.selection.map(id => etat.listes.find(l => l.id === id)).filter(Boolean);
-  $("pastilles").innerHTML = listes.map(l => `<span class="pastille">${icone(iconeListe(l))}${echapper(l.nom)}</span>`).join("");
+  // Pastilles : les listes cochées, puis les météos cochées (en bleu)
+  $("pastilles").innerHTML = listes.map(l => `<span class="pastille">${icone(iconeListe(l))}${echapper(l.nom)}</span>`).join("")
+    + METEOS.map(m => m.id).filter(id => meteosActives().includes(id)).map(id => `<span class="pastille pastille-meteo-mini">${icone(METEOS.find(m => m.id === id).icone)}${nomMeteo(id)}</span>`).join("");
+  // Mode modifier : bouton pour rouvrir « Tu prends aussi ? » (s'il y a des facultatifs)
+  const nbFac = candidatsFacultatifs().length;
+  $("btn-facultatifs").hidden = !modeRanger || !nbFac;
+  $("btn-facultatifs").querySelector("span").textContent = `Facultatifs (${etat.ponctuel.facultatifs.length}/${nbFac})`;
 
   const objets = fusionner();
   const estPris = o => etat.coches.includes(o.cle);
@@ -376,7 +512,9 @@ function afficherChecklist() {
   // Affichage choisi (sur cet appareil) : liste continue, cadres, ou 2 colonnes
   $("checklist").className = "aff-" + lireReglage("affichage");
   // Le nom est dans un <span class="txt"> : c'est lui qu'on « barre » (trait animé)
-  const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>`;
+  // Dans « Spécial Météo », une petite étiquette rappelle où ranger l'objet (son vrai contenant)
+  const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>`
+    + (o.meteo ? `<span class="etiquette-ou">${echapper(nomContenant(o.sac))}</span>` : "");
   // Chaque contenant est rangé dans sa « boîte » (bandeau + objets) : selon l'affichage,
   // la boîte est invisible (liste continue) ou devient un cadre séparé
   // Contenant dont tout est coché : classe « fini » (bandeau pâli, cadre grisé)
@@ -423,6 +561,10 @@ function optionsContenants(choisi) {
 
 function afficherEditionListe(l) {
   listeEnCours = l;
+  // « Toujours proposés » : nom fixe, pas d'icône ni de suppression de la liste
+  $("nom-liste").disabled = !!l.special;
+  $("btn-suppr-liste").hidden = !!l.special;
+  $("icone-liste").hidden = !!l.special;
   // Ne pas réécrire le nom pendant que je suis en train de le taper
   if (document.activeElement !== $("nom-liste")) $("nom-liste").value = l.nom;
   const bouton = $("icone-liste");
@@ -431,26 +573,126 @@ function afficherEditionListe(l) {
   bouton.classList.toggle("ouvert", grilleOuverte === "liste");
   $("grille-liste").innerHTML = grilleOuverte === "liste" ? grilleIcones(iconeListe(l)) : "";
 
-  $("objets-liste").innerHTML = grouperParContenant(l.objets).map(g =>
-    bandeau(g, String(g.objets.length).padStart(2, "0")) +
-    g.objets.map(o => {
-      const ouvert = grilleOuverte === "objet:" + o.id;
-      return `<div class="objet-edit" data-objet="${o.id}">
-        ${modeRanger ? poignee() : ""}
-        <button type="button" class="choix-icone ${ouvert ? "ouvert" : ""}" data-ouvrir="objet:${o.id}" aria-label="Changer l'icône">${icone(iconeObjet(o))}</button>
-        <input class="e-nom" value="${echapper(o.nom)}" aria-label="Nom de l'objet">
-        <select class="e-sac" aria-label="Contenant">${optionsContenants(o.sac)}</select>
-        <input class="e-qte" type="number" min="1" max="99" value="${o.qte > 1 ? o.qte : ""}" placeholder="1" aria-label="Quantité">
-        <button class="btn-icone" data-suppr-objet="${o.id}" aria-label="Supprimer">${icone("x")}</button>
-      </div>${ouvert ? grilleIcones(iconeObjet(o)) : ""}`;
-    }).join("")
+  // Une ligne : poignée, icône, nom (+ quantité), étiquettes, croix. Toucher la ligne = la modifier.
+  const ligne = o => `<div class="objet objet-ranger objet-liste" data-objet="${o.id}">${poignee()}${icone(iconeObjet(o))}
+      <span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
+      ${o.facultatif && !l.special ? `<span class="etiquette-ponctuel">Facultatif</span>` : ""}
+      ${o.meteo ? `<span class="etiquette-ou">${echapper(nomContenant(o.sac))}</span>` : ""}
+      <button class="btn-icone retirer" data-suppr-objet="${o.id}" aria-label="Supprimer">${icone("x")}</button>
+    </div>`;
+  // Dans « Spécial Météo », un petit sous-titre par météo (« Si pluie »...) ; on peut y glisser des objets
+  const lignesMeteo = objets => METEOS.map(m => {
+    const lesquels = objets.filter(o => o.meteo === m.id);
+    return `<div class="sous-meteo" data-meteo-sous="${m.id}">${icone(m.icone)}Si ${m.nom.toLowerCase()}</div>` + lesquels.map(ligne).join("");
+  }).join("");
+  $("objets-liste").innerHTML = grouperParContenant(l.objets, !l.special).map(g =>
+    `<div class="boite">${bandeau(g, String(g.objets.length))}${g.id === "meteo" ? lignesMeteo(g.objets) : g.objets.map(ligne).join("")}</div>`
   ).join("") || `<p class="vide">Liste vide. Ajoute ton premier objet en bas.</p>`;
-
-  // Menu du formulaire d'ajout (garde le dernier contenant choisi)
-  const sel = $("objet-sac");
-  const garde = sel.value || "poches";
-  sel.innerHTML = optionsContenants(contenants().some(c => c.id === garde) ? garde : "poches");
 }
+
+// --- Fenêtre « Modifier l'objet » (aussi pour ajouter un objet) ---
+// « brouillon » = l'objet en cours de modification ; rien n'est enregistré avant « OK ».
+let fenetreObjet = null; // { liste, id (null = nouvel objet), brouillon, grille }
+function ouvrirFenetreObjet(l, o) {
+  fenetreObjet = {
+    liste: l, id: o ? o.id : null, grille: false,
+    brouillon: o ? { ...o } : { nom: "", qte: 1, sac: "poches", meteo: "", facultatif: false }
+  };
+  $("fo-nom").value = fenetreObjet.brouillon.nom;
+  afficherFenetreObjet();
+  $("fenetre-objet").hidden = false;
+  if (!o) setTimeout(() => $("fo-nom").focus(), 50);
+}
+function afficherFenetreObjet() {
+  const f = fenetreObjet;
+  const b = f.brouillon;
+  $("titre-objet").querySelector(".nom").textContent = f.id ? "Modifier l'objet" : "Nouvel objet";
+  $("fo-qte").textContent = String(b.qte || 1);
+  $("fo-sac").innerHTML = contenants().map(c =>
+    `<button type="button" data-fo-sac="${c.id}" aria-pressed="${b.sac === c.id}">${echapper(c.nom)}</button>`).join("");
+  $("fo-meteo").innerHTML = [{ id: "", nom: "Toujours" }, ...METEOS].map(m =>
+    `<button type="button" data-fo-meteo="${m.id}" aria-pressed="${(b.meteo || "") === m.id}">${m.nom}</button>`).join("");
+  // Dans « Toujours proposés », tout est facultatif : pas besoin de la question
+  $("ligne-fo-facultatif").hidden = !!f.liste.special;
+  document.querySelectorAll("[data-fac]").forEach(x => x.setAttribute("aria-pressed", (x.dataset.fac === "oui") === !!b.facultatif));
+  $("fo-icone").innerHTML = icone(iconeObjet({ ...b, nom: $("fo-nom").value || b.nom }));
+  $("fo-icone").classList.toggle("ouvert", f.grille);
+  $("fo-grille").innerHTML = f.grille ? grilleIcones(b.icone).replace(/data-icone-choix/g, "data-fo-icone") : "";
+  $("fo-supprimer").hidden = !f.id;
+  afficherSuggestionsObjet();
+}
+function fermerFenetreObjet() {
+  $("fenetre-objet").hidden = true;
+  $("fo-suggestions").innerHTML = "";
+  fenetreObjet = null;
+}
+// Suggestions sous le nom : objets de mes autres listes (pas ceux déjà dans celle-ci)
+let suggestionsObjet = [];
+function afficherSuggestionsObjet() {
+  const f = fenetreObjet;
+  if (!f) return;
+  const deja = new Set(f.liste.objets.filter(o => o.id !== f.id).map(o => cle(o.nom)));
+  suggestionsObjet = f.id ? [] : suggestions($("fo-nom").value, deja);
+  $("fo-suggestions").innerHTML = htmlSuggestions(suggestionsObjet);
+}
+$("fo-nom").addEventListener("input", () => {
+  // L'icône devinée suit le nom tapé (si je n'en ai pas choisi une)
+  if (fenetreObjet) $("fo-icone").innerHTML = icone(iconeObjet({ ...fenetreObjet.brouillon, nom: $("fo-nom").value }));
+  afficherSuggestionsObjet();
+});
+$("form-fenetre-objet").addEventListener("click", e => {
+  const f = fenetreObjet;
+  if (!f) return;
+  const b = f.brouillon;
+  const t = e.target.closest("button");
+  if (!t) return;
+  if (t.dataset.qte) b.qte = Math.min(99, Math.max(1, (b.qte || 1) + +t.dataset.qte));
+  else if (t.dataset.foSac) b.sac = t.dataset.foSac;
+  else if (t.dataset.foMeteo !== undefined) b.meteo = t.dataset.foMeteo;
+  else if (t.dataset.fac) b.facultatif = t.dataset.fac === "oui";
+  else if (t.id === "fo-icone") f.grille = !f.grille;
+  else if (t.dataset.foIcone) { b.icone = t.dataset.foIcone; f.grille = false; }
+  else if (t.dataset.suggestion !== undefined) {
+    // Suggestion choisie : on reprend son nom, son contenant, son icône et sa quantité
+    const m = suggestionsObjet[+t.dataset.suggestion];
+    if (!m) return;
+    $("fo-nom").value = m.nom;
+    if (contenants().some(c => c.id === m.sac)) b.sac = m.sac;
+    if (m.icone) b.icone = m.icone;
+    if (m.qte > 1) b.qte = m.qte;
+    if (m.meteo) b.meteo = m.meteo;
+  }
+  else if (t.id === "fo-supprimer") {
+    const l = f.liste, id = f.id, nom = b.nom;
+    fermerFenetreObjet();
+    supprimerAvecAnnulation(`« ${nom} » supprimé`, () => { l.objets.splice(l.objets.findIndex(x => x.id === id), 1); });
+    return;
+  }
+  else return;
+  afficherFenetreObjet();
+});
+$("form-fenetre-objet").addEventListener("submit", e => {
+  e.preventDefault();
+  const f = fenetreObjet;
+  if (!f) return;
+  const nom = $("fo-nom").value.trim();
+  if (!nom) return;
+  if (f.liste.objets.some(o => o.id !== f.id && cle(o.nom) === cle(nom))) {
+    afficherToast(`« ${nom} » est déjà dans cette liste`, null);
+    return;
+  }
+  // On n'enregistre que les champs utiles (pas de météo vide, pas de « facultatif : non »)
+  const b = f.brouillon;
+  const objet = { id: f.id || nouvelId(), nom, qte: b.qte > 1 ? b.qte : 1, sac: b.sac };
+  if (b.icone) objet.icone = b.icone;
+  if (b.meteo) objet.meteo = b.meteo;
+  if (b.facultatif && !f.liste.special) objet.facultatif = true;
+  const i = f.liste.objets.findIndex(o => o.id === f.id);
+  if (i >= 0) f.liste.objets[i] = objet; else { f.liste.objets.push(objet); ajoute(); }
+  fermerFenetreObjet();
+  sauver();
+  router();
+});
 
 // --- Écran 4 : réglages ---
 function afficherReglages() {
@@ -459,6 +701,10 @@ function afficherReglages() {
   $("ligne-vibration").hidden = !peutVibrer;
   document.querySelectorAll("[data-feeling]").forEach(b => b.setAttribute("aria-pressed", lireReglage(b.dataset.feeling)));
   majBoutonsAffichage();
+  // Météo : ville et seuils (synchronisés entre téléphone et PC)
+  const v = etat.meteo.ville;
+  $("ville-actuelle").textContent = v ? v.nom + (v.detail ? " (" + v.detail + ")" : "") : "aucune";
+  ["pluie", "froid", "chaud", "vent"].forEach(k => { if (document.activeElement !== $("seuil-" + k)) $("seuil-" + k).value = etat.meteo.seuils[k]; });
   $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
   $("liste-sacs").innerHTML = contenants().map((c, i) => {
     const ouvert = grilleOuverte === "sac:" + c.id;
@@ -612,7 +858,30 @@ $("liste-listes").addEventListener("click", e => {
     $("btn-preparer").classList.remove("saute"); void $("btn-preparer").offsetWidth; $("btn-preparer").classList.add("saute");
   }
 });
-$("btn-preparer").addEventListener("click", () => { lance(); aller("prep"); });
+$("btn-preparer").addEventListener("click", () => {
+  lance();
+  aller("prep");
+  // S'il y a des facultatifs pas encore proposés pour cette sortie : « Tu prends aussi ? »
+  if (candidatsFacultatifs().some(c => !etat.ponctuel.vus.includes(c.cle))) setTimeout(ouvrirFacultatifs, 120);
+});
+// Pastilles météo de l'accueil : je corrige la météo auto à la main (pour aujourd'hui seulement)
+$("cadre-meteo").addEventListener("click", e => {
+  if (e.target.closest("[data-aller]")) { aller("reglages"); return; } // « Choisis ta ville »
+  const b = e.target.closest("[data-meteo]");
+  if (!b) return;
+  const actives = meteosActives();
+  const id = b.dataset.meteo;
+  const coche = !actives.includes(id);
+  etat.meteo.choix = coche ? [...actives, id] : actives.filter(x => x !== id);
+  etat.meteo.jour = aujourdhui();
+  aCoche(coche);
+  sauver();
+  afficherAccueil();
+});
+$("cadre-toujours").addEventListener("click", e => {
+  const b = e.target.closest("[data-modifier]");
+  if (b) aller("liste=toujours");
+});
 // Crée une liste (vide, ou copie d'une autre) et l'ouvre, nom prêt à être retapé
 function creerListe(modele) {
   const l = modele
@@ -695,11 +964,11 @@ function etincelle() {
 // « Tout décocher » repart de zéro : coches ET changements « juste pour cette sortie »
 $("btn-tout-decocher").addEventListener("click", () => {
   const p = etat.ponctuel;
-  if (!etat.coches.length && !p.ajouts.length && !p.retraits.length && !p.ordre.length && !p.deplaces.length) return;
+  if (!etat.coches.length && !p.ajouts.length && !p.retraits.length && !p.ordre.length && !p.deplaces.length && !p.facultatifs.length && !p.vus.length) return;
   toutDecoche(); // vibration longue et douce
   const remettre = () => supprimerAvecAnnulation("Préparation remise à zéro", () => {
     etat.coches = [];
-    etat.ponctuel = { ajouts: [], retraits: [], ordre: [], deplaces: [] };
+    etat.ponctuel = ponctuelVide();
   });
   // Animations complètes : les cases se vident une par une, de haut en bas, puis on remet à zéro
   const cochees = [...$("checklist").querySelectorAll(".objet.coche")];
@@ -708,6 +977,56 @@ $("btn-tout-decocher").addEventListener("click", () => {
   cochees.forEach((l, i) => setTimeout(() => { l.classList.remove("coche", "vient-coche"); l.classList.add("vient-decoche"); }, i * pas));
   setTimeout(remettre, cochees.length * pas + 200);
 });
+
+// --- Fenêtre « Tu prends aussi ? » (facultatifs) ---
+// Tout est décoché au départ (sauf ce que j'ai déjà pris pour cette sortie).
+// Ce que je coche rejoint la checklist d'aujourd'hui, dans son contenant habituel.
+let facChoisis = [];
+function ouvrirFacultatifs() {
+  const cands = candidatsFacultatifs();
+  if (!cands.length) return;
+  facChoisis = etat.ponctuel.facultatifs.filter(k => cands.some(c => c.cle === k));
+  afficherFacultatifs();
+  $("fenetre-facultatifs").hidden = false;
+}
+function afficherFacultatifs() {
+  const cands = candidatsFacultatifs();
+  $("nb-facultatifs").textContent = String(cands.length);
+  $("liste-facultatifs").innerHTML = cands.map(c =>
+    `<button class="ligne ligne-cliquable ${facChoisis.includes(c.cle) ? "coche" : ""}" data-fac-cle="${echapper(c.cle)}">
+      ${caseACocher()}${icone(c.icone)}<span class="nom">${echapper(c.nom)}</span><span class="source">${echapper(c.source)}</span></button>`).join("");
+  $("btn-fac-valider").textContent = `Valider [${facChoisis.length}]`;
+}
+function fermerFacultatifs(valider) {
+  const cands = candidatsFacultatifs();
+  // On note qu'ils ont été proposés : la fenêtre ne revient pas toute seule pour eux
+  etat.ponctuel.vus = [...new Set([...etat.ponctuel.vus, ...cands.map(c => c.cle)])];
+  if (valider) {
+    etat.ponctuel.facultatifs = facChoisis;
+    if (facChoisis.length) ajoute();
+  }
+  $("fenetre-facultatifs").hidden = true;
+  sauver();
+  router();
+}
+$("liste-facultatifs").addEventListener("click", e => {
+  const b = e.target.closest("[data-fac-cle]");
+  if (!b) return;
+  const k = b.dataset.facCle;
+  const coche = !facChoisis.includes(k);
+  facChoisis = coche ? [...facChoisis, k] : facChoisis.filter(x => x !== k);
+  aCoche(coche);
+  afficherFacultatifs();
+});
+$("btn-fac-valider").addEventListener("click", () => fermerFacultatifs(true));
+$("btn-fac-aucun").addEventListener("click", () => { facChoisis = []; fermerFacultatifs(true); });
+$("btn-facultatifs").addEventListener("click", ouvrirFacultatifs);
+// Toucher le fond sombre autour d'une fenêtre la ferme (sans rien changer)
+document.querySelectorAll(".fenetre").forEach(f => f.addEventListener("click", e => {
+  if (e.target !== f) return;
+  if (f.id === "fenetre-facultatifs") fermerFacultatifs(false);
+  else fermerFenetreObjet();
+}));
 
 // --- Ajouter un objet pendant la préparation ---
 // Par défaut juste pour cette sortie ; case à cocher pour l'ajouter aussi à une des listes.
@@ -770,49 +1089,61 @@ $("btn-suppr-liste").addEventListener("click", () => {
   });
   retour();
 });
-$("form-objet").addEventListener("submit", e => {
-  e.preventDefault();
-  const nom = $("objet-nom").value.trim();
-  if (!nom || !listeEnCours) return;
-  if (listeEnCours.objets.some(o => cle(o.nom) === cle(nom))) {
-    afficherToast(`« ${nom} » est déjà dans cette liste`, null);
+// Toucher un objet ouvre la fenêtre « Modifier l'objet » ; la croix le supprime (avec Annuler)
+$("objets-liste").addEventListener("click", e => {
+  const l = listeEnCours;
+  if (!l) return;
+  const b = e.target.closest("[data-suppr-objet]");
+  if (b) {
+    const o = l.objets.find(x => x.id === b.dataset.supprObjet);
+    // splice (et pas filter) : l'objet est retiré du vrai tableau, même pour « Toujours proposés »
+    supprimerAvecAnnulation(`« ${o.nom} » supprimé`, () => { l.objets.splice(l.objets.indexOf(o), 1); });
     return;
   }
-  const qte = parseInt($("objet-qte").value, 10);
-  // Pas d'icône enregistrée : elle sera devinée d'après le nom
-  listeEnCours.objets.push({ id: nouvelId(), nom, qte: qte > 1 ? qte : 1, sac: $("objet-sac").value });
-  ajoute(); // petit « pop »
-  sauver();
-  $("objet-nom").value = "";
-  $("objet-qte").value = "";
-  afficherSuggestions(); // vide les suggestions
-  afficherEditionListe(listeEnCours);
-  $("objet-nom").focus(); // prêt pour taper l'objet suivant
-});
-// Modification d'un objet déjà dans la liste (nom, contenant, quantité)
-$("objets-liste").addEventListener("change", e => {
   const ligne = e.target.closest("[data-objet]");
-  if (!ligne || !listeEnCours) return;
-  const o = listeEnCours.objets.find(x => x.id === ligne.dataset.objet);
-  if (!o) return;
-  const nom = ligne.querySelector(".e-nom").value.trim();
-  if (nom) o.nom = nom;
-  o.sac = ligne.querySelector(".e-sac").value;
-  const qte = parseInt(ligne.querySelector(".e-qte").value, 10);
-  o.qte = qte > 1 ? qte : 1;
+  if (!ligne || e.target.closest(".poignee")) return;
+  const o = l.objets.find(x => x.id === ligne.dataset.objet);
+  if (o) ouvrirFenetreObjet(l, o);
+});
+$("btn-ajout-objet").addEventListener("click", () => { if (listeEnCours) ouvrirFenetreObjet(listeEnCours, null); });
+
+// --- Réglages : météo ---
+// Recherche d'une ville (Open-Meteo), puis choix dans la liste des propositions
+let villesTrouvees = [];
+$("form-ville").addEventListener("submit", async e => {
+  e.preventDefault();
+  const nom = $("ville-nom").value.trim();
+  if (!nom) return;
+  $("villes-trouvees").innerHTML = `<p class="aide">Recherche…</p>`;
+  try {
+    villesTrouvees = await rechercherVille(nom);
+    $("villes-trouvees").innerHTML = villesTrouvees.length
+      ? villesTrouvees.map((v, i) => `<button class="ligne-ajout" data-ville="${i}">${icone("map-pin")}${echapper(v.nom)}<span class="source">${echapper(v.detail)}</span></button>`).join("")
+      : `<p class="aide">Aucune ville trouvée.</p>`;
+  } catch (err) {
+    $("villes-trouvees").innerHTML = `<p class="aide">Recherche impossible (pas de réseau ?).</p>`;
+  }
+});
+$("villes-trouvees").addEventListener("click", e => {
+  const b = e.target.closest("[data-ville]");
+  const v = b && villesTrouvees[+b.dataset.ville];
+  if (!v) return;
+  etat.meteo.ville = v;
+  etat.meteo.choix = null; // nouvelle ville : on repart sur la météo auto
   sauver();
-  // Contenant changé : l'objet change de section. Nom changé : l'icône devinée peut changer.
-  if (!e.target.classList.contains("e-qte")) afficherEditionListe(listeEnCours);
+  $("ville-nom").value = "";
+  $("villes-trouvees").innerHTML = "";
+  meteoDonnees = null;
+  afficherReglages();
+  majMeteo();
 });
-$("objets-liste").addEventListener("click", e => {
-  const b = e.target.closest("[data-suppr-objet]");
-  if (!b || !listeEnCours) return;
-  const l = listeEnCours;
-  const o = l.objets.find(x => x.id === b.dataset.supprObjet);
-  supprimerAvecAnnulation(`« ${o.nom} » supprimé`, () => {
-    l.objets = l.objets.filter(x => x.id !== o.id);
-  });
-});
+// Seuils : enregistrés dès qu'on quitte le champ
+["pluie", "froid", "chaud", "vent"].forEach(k => $("seuil-" + k).addEventListener("change", e => {
+  const n = parseInt(e.target.value, 10);
+  if (Number.isNaN(n)) { e.target.value = etat.meteo.seuils[k]; return; }
+  etat.meteo.seuils[k] = n;
+  sauver();
+}));
 
 // --- Réglages : contenants ---
 $("form-sac").addEventListener("submit", e => {
@@ -876,14 +1207,6 @@ function htmlSuggestions(liste) {
       <span class="etiquette coul-${c.couleur}">${echapper(c.nom)}</span></button>`;
   }).join("");
 }
-// Écran Modifier : on ne propose pas ce qui est déjà dans la liste
-function afficherSuggestions() {
-  suggestionsAffichees = listeEnCours
-    ? suggestions($("objet-nom").value, new Set(listeEnCours.objets.map(o => cle(o.nom))))
-    : [];
-  $("suggestions").innerHTML = htmlSuggestions(suggestionsAffichees);
-}
-let suggestionsAffichees = [];
 // Checklist : on ne propose pas ce qui est déjà à prendre
 let suggestionsPonctuel = [];
 function afficherSuggestionsPonctuel() {
@@ -900,24 +1223,6 @@ $("suggestions-ponctuel").addEventListener("click", e => {
   const obj = { nom: modele.nom, qte: qteTapee > 1 ? qteTapee : (modele.qte || 1), sac };
   if (modele.icone) obj.icone = modele.icone;
   ajouterPonctuel(obj);
-});
-$("objet-nom").addEventListener("input", afficherSuggestions);
-$("suggestions").addEventListener("click", e => {
-  const b = e.target.closest("[data-suggestion]");
-  const modele = b && suggestionsAffichees[+b.dataset.suggestion];
-  if (!modele || !listeEnCours) return;
-  // On garde le contenant d'origine s'il existe encore, sinon celui du menu
-  const sac = contenants().some(c => c.id === modele.sac) ? modele.sac : $("objet-sac").value;
-  const qteTapee = parseInt($("objet-qte").value, 10);
-  const nouvel = { id: nouvelId(), nom: modele.nom, qte: qteTapee > 1 ? qteTapee : (modele.qte || 1), sac };
-  if (modele.icone) nouvel.icone = modele.icone;
-  listeEnCours.objets.push(nouvel);
-  sauver();
-  $("objet-nom").value = "";
-  $("objet-qte").value = "";
-  afficherSuggestions();
-  afficherEditionListe(listeEnCours);
-  $("objet-nom").focus();
 });
 
 // --- Glisser pour réordonner ---
@@ -974,11 +1279,11 @@ function rendreTriable(conteneur, selecteur, auLacher) {
       else if (ev.clientY > innerHeight - 80) window.scrollBy(0, 14);
       suivre();
       const sous = document.elementFromPoint(ev.clientX, ev.clientY);
-      const cible = sous && sous.closest(selecteur + ", .titre-section");
+      const cible = sous && sous.closest(selecteur + ", .titre-section, .sous-meteo");
       if (!cible || cible === ligne || !conteneur.contains(cible)) return;
       const r = cible.getBoundingClientRect();
       // Sur un bandeau de contenant : on se place juste en dessous (en tête de ce contenant)
-      const apres = cible.classList.contains("titre-section") || ev.clientY > r.top + r.height / 2;
+      const apres = cible.matches(".titre-section, .sous-meteo") || ev.clientY > r.top + r.height / 2;
       if (apres && cible.nextElementSibling !== ligne) deplacer(() => cible.after(ligne));
       else if (!apres && cible.previousElementSibling !== ligne) deplacer(() => cible.before(ligne));
     };
@@ -1011,24 +1316,32 @@ rendreTriable($("liste-listes"), "[data-choisir]", () => {
   afficherAccueil();
 });
 
-// Modifier une liste : l'ordre des objets, et leur contenant (celui du bandeau au-dessus)
+// Modifier une liste : l'ordre des objets, et leur contenant (celui du bandeau au-dessus).
+// Glissé dans « Spécial Météo » : l'objet prend la météo du sous-titre au-dessus (« Si pluie »...) ;
+// glissé hors de ce cadre : il redevient un objet de tous les jours (et garde son vrai contenant).
 rendreTriable($("objets-liste"), "[data-objet]", () => {
   const l = listeEnCours;
   if (!l) return;
-  let sac = null;
+  let sac = null, meteo = null;
   const nouvelOrdre = [];
-  for (const el of $("objets-liste").children) {
-    if (el.classList.contains("titre-section")) sac = el.dataset.sac;
-    else if (el.dataset.objet) {
+  for (const el of $("objets-liste").querySelectorAll(".titre-section, .sous-meteo, [data-objet]")) {
+    if (el.classList.contains("titre-section")) { sac = el.dataset.sac; meteo = null; }
+    else if (el.classList.contains("sous-meteo")) meteo = el.dataset.meteoSous;
+    else {
       const o = l.objets.find(x => x.id === el.dataset.objet);
       if (!o) continue;
-      if (sac && sac !== "?") o.sac = sac; // « Sans sac » ne change rien
+      if (sac === "meteo") o.meteo = meteo || o.meteo || METEOS[0].id;
+      else {
+        delete o.meteo;
+        if (sac && sac !== "?") o.sac = sac; // « Sans sac » ne change rien
+      }
       nouvelOrdre.push(o);
     }
   }
   // Sécurité : on ne perd jamais un objet qui n'aurait pas été retrouvé à l'écran
   l.objets.forEach(o => { if (!nouvelOrdre.includes(o)) nouvelOrdre.push(o); });
-  l.objets = nouvelOrdre;
+  // On remplace le contenu du vrai tableau (indispensable pour « Toujours proposés »)
+  l.objets.splice(0, l.objets.length, ...nouvelOrdre);
   sauver();
   afficherEditionListe(l);
 });
@@ -1046,7 +1359,7 @@ rendreTriable($("checklist"), "[data-cle]", () => {
       ordre.push(k);
       const o = actuels.get(k);
       // Glissé sous un autre bandeau : on note le nouveau sac pour cette sortie
-      if (o && sac && sac !== "?" && o.sac !== sac) {
+      if (o && sac && sac !== "?" && sac !== "meteo" && !o.meteo && o.sac !== sac) {
         etat.ponctuel.deplaces = etat.ponctuel.deplaces.filter(d => d.cle !== k);
         etat.ponctuel.deplaces.push({ cle: k, sac });
       }
@@ -1086,21 +1399,26 @@ $("btn-export").addEventListener("click", async () => {
     const classeur = new ExcelJS.Workbook();
     classeur.creator = "Stuff to go";
     const lignes = [];
-    etat.listes.forEach(l => {
+    // La liste spéciale « Toujours proposés » est exportée avec les autres, sous un nom réservé
+    [...etat.listes, listeToujours()].forEach(l => {
+      const nomL = l.special ? NOM_TOUJOURS : l.nom;
       // Objets rangés par contenant pour que le fichier soit lisible
       const ordre = contenants().map(c => c.id);
       const rang = sac => { const i = ordre.indexOf(sac); return i < 0 ? 999 : i; }; // « Sans sac » à la fin
       [...l.objets]
         .sort((a, b) => rang(a.sac) - rang(b.sac))
-        .forEach(o => lignes.push({ liste: l.nom, contenant: nomContenant(o.sac), objet: o.nom, qte: o.qte || 1, icone: o.icone || "" }));
-      if (!l.objets.length) lignes.push({ liste: l.nom, contenant: "", objet: "", qte: "", icone: "" }); // garde les listes vides
+        .forEach(o => lignes.push({ liste: nomL, contenant: nomContenant(o.sac), objet: o.nom, qte: o.qte || 1, icone: o.icone || "",
+          meteo: o.meteo ? nomMeteo(o.meteo) : "", facultatif: o.facultatif ? "Oui" : "" }));
+      if (!l.objets.length && !l.special) lignes.push({ liste: nomL, contenant: "", objet: "", qte: "", icone: "", meteo: "", facultatif: "" }); // garde les listes vides
     });
     ajouterFeuille(classeur, "Listes", [
       { header: "Liste", key: "liste", width: 22 },
       { header: "Contenant", key: "contenant", width: 18 },
       { header: "Objet", key: "objet", width: 30 },
       { header: "Quantité", key: "qte", width: 11 },
-      { header: "Icône", key: "icone", width: 16 }
+      { header: "Icône", key: "icone", width: 16 },
+      { header: "Météo", key: "meteo", width: 11 },
+      { header: "Facultatif", key: "facultatif", width: 12 }
     ], lignes);
     ajouterFeuille(classeur, "Endroits", [
       { header: "Liste", key: "liste", width: 26 },
@@ -1168,12 +1486,19 @@ $("fichier-import").addEventListener("change", async e => {
       return liste;
     };
     lignesEndroits.forEach(l => { if (l["Liste"]) avecIcone(trouverListe(l["Liste"]), l["Icône"]); });
+    // Colonnes Météo et Facultatif (absentes des fichiers d'avant la v1.4 : pas grave)
+    const meteoDe = nom => (METEOS.find(m => simplifier(m.nom) === simplifier(String(nom || ""))) || {}).id;
+    const toujours = { objets: [] };
     lignesListes.forEach(l => {
       if (!l["Liste"]) return;
-      const liste = trouverListe(l["Liste"]);
+      const liste = l["Liste"] === NOM_TOUJOURS ? toujours : trouverListe(l["Liste"]);
       if (l["Objet"] && !liste.objets.some(o => cle(o.nom) === cle(l["Objet"]))) {
         const qte = parseInt(l["Quantité"], 10);
-        liste.objets.push(avecIcone({ id: nouvelId(), nom: l["Objet"], qte: qte > 1 ? qte : 1, sac: trouverSac(l["Contenant"]) }, l["Icône"]));
+        const o = avecIcone({ id: nouvelId(), nom: l["Objet"], qte: qte > 1 ? qte : 1, sac: trouverSac(l["Contenant"]) }, l["Icône"]);
+        const m = meteoDe(l["Météo"]);
+        if (m) o.meteo = m;
+        if (simplifier(String(l["Facultatif"] || "")) === "oui" && liste !== toujours) o.facultatif = true;
+        liste.objets.push(o);
       }
     });
 
@@ -1181,6 +1506,7 @@ $("fichier-import").addEventListener("change", async e => {
       etat.poches = poches;
       etat.sacs = sacs;
       etat.listes = listes;
+      etat.toujours = toujours;
       etat.selection = etat.selection.filter(id => listes.some(l => l.id === id));
     });
   } catch (err) {
@@ -1213,4 +1539,6 @@ if ("serviceWorker" in navigator && location.protocol === "https:") {
 }
 
 $("version").textContent = VERSION;
+// En revenant sur l'appli (elle reste souvent ouverte en arrière-plan), on rafraîchit la météo
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") majMeteo(); });
 if (MODE_DEMO) demarrerDemo(); else demarrerFirebase();

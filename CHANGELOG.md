@@ -1,5 +1,14 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.4.0 — 2026-11-06
+Grosse mise à jour : météo et facultatifs.
+- Accueil en cadres séparés : Météo, Endroits, Toujours proposés.
+- Météo auto (Open-Meteo, gratuit, sans compte) pour la ville choisie dans Réglages, sur le reste de la journée : pré-coche Pluie, Froid, Chaud, Vent (Neige si besoin). On corrige à la main en touchant les pastilles. Seuils réglables.
+- Objets météo : dans chaque liste, un objet peut être marqué « si pluie », « si froid »... Il n'apparaît que si cette météo est cochée, dans un cadre à part « Spécial Météo » (avec son vrai contenant en étiquette).
+- Facultatifs : un objet peut être marqué facultatif, et la liste « Toujours proposés » revient à chaque sortie. Après « Préparer », la fenêtre « Tu prends aussi ? » demande lesquels prendre aujourd'hui (rouvrable en mode modifier).
+- Modifier une liste : nouveau look en cadres (comme Check en cours en mode modifier). Toucher un objet ouvre la fenêtre « Modifier l'objet » (nom, quantité, contenant, météo, facultatif, icône) ; glisser vers « Spécial Météo » en fait un objet météo.
+- Excel : nouvelles colonnes Météo et Facultatif, et la liste « (Toujours proposés) ».
+
 ## v1.3.2 — 2026-11-06
 Encore plus de feeling.
 - Sons : « tic de menu » très discret pour cocher (un cran plus bas pour décocher), « pop » en ajoutant un objet, deux notes quand un contenant est terminé, tic léger à chaque cran du glisser.
