@@ -135,16 +135,11 @@
   <header class="barre coul-gris">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Réglages</h1>
-    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger les sacs"></button>
   </header>
 
   <h2 class="section"><span>Contenants</span><span id="nb-contenants"></span></h2>
-  <p class="aide">Touche une icône pour la changer. « Poches » reste toujours en premier.</p>
-  <div id="liste-sacs"></div>
-  <form id="form-sac" class="form-ligne" autocomplete="off">
-    <input id="sac-nom" placeholder="Nouveau sac (ex. Sacoche)" required>
-    <button class="btn-principal coul-jaune" aria-label="Ajouter le sac"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
-  </form>
+  <!-- Les contenants ont leur propre écran (#contenants), pour garder Réglages compact -->
+  <button class="ligne-ajout" data-aller="contenants"><svg class="ic"><use href="icones/tabler.svg#backpack"></use></svg>Voir mes contenants<svg class="ic fleche-droite"><use href="icones/tabler.svg#arrow-right"></use></svg></button>
 
   <h2 class="section"><span>Ressenti</span><span>CET APPAREIL</span></h2>
   <!-- Thème : suivre le téléphone (auto) ou forcer clair / sombre -->
@@ -184,6 +179,21 @@
   </div>
 
   <p class="version">Stuff to go · <span id="version"></span></p>
+</section>
+
+<!-- ============ ÉCRAN 5 : MES CONTENANTS (ouvert depuis Réglages) ============ -->
+<section id="ecran-contenants" class="ecran" hidden>
+  <header class="barre coul-gris">
+    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
+    <h1 class="titre">Mes contenants</h1>
+    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger les sacs"></button>
+  </header>
+  <p class="aide">Touche une icône pour la changer. « Poches » reste toujours en premier.</p>
+  <div id="liste-sacs"></div>
+  <form id="form-sac" class="form-ligne" autocomplete="off">
+    <input id="sac-nom" placeholder="Nouveau sac (ex. Sacoche)" required>
+    <button class="btn-principal coul-jaune" aria-label="Ajouter le sac"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg></button>
+  </form>
 </section>
 
 <!-- Petit message en bas de l'écran (« Élément supprimé — Annuler ») -->

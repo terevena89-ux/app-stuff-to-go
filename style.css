@@ -506,3 +506,7 @@ input[type=number] { -moz-appearance: textfield; }
   box-shadow: var(--ombre) var(--ombre) 0 var(--pris);
 }
 .boite.fini .titre-section { border-color: var(--pris); }
+
+/* Réglages : bouton « Voir mes contenants » (ouvre son propre écran, v1.3.1) */
+.ligne-ajout .fleche-droite { margin-left: auto; }
+[data-aller="contenants"] { color: var(--encre); }

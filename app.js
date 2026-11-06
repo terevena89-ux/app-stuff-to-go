@@ -26,7 +26,7 @@ import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.3.0";
+const VERSION = "v1.3.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -186,7 +186,7 @@ window.addEventListener("online", () => majSynchro());
 window.addEventListener("offline", () => majSynchro());
 
 // ---------- 3. Navigation ----------
-// Chaque écran a son adresse (#prep, #liste=..., #reglages) : ainsi le bouton
+// Chaque écran a son adresse (#prep, #liste=..., #reglages, #contenants) : ainsi le bouton
 // « retour » du téléphone ramène à l'écran précédent, comme dans une vraie appli.
 
 let ecranActuel = "";
@@ -222,6 +222,7 @@ function router() {
     afficherEditionListe(l); montrer("liste");
   }
   else if (h === "reglages") { afficherReglages(); montrer("reglages"); }
+  else if (h === "contenants") { afficherReglages(); montrer("contenants"); }
   else { afficherAccueil(); montrer("accueil"); }
 }
 // En changeant d'écran, on referme une éventuelle grille d'icônes

@@ -1,5 +1,8 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.3.1 — 2026-11-06
+- Réglages plus compact : les contenants (sacs, couleurs, icônes, ordre) sont sur leur propre écran « Mes contenants », ouvert par « Voir mes contenants ».
+
 ## v1.3.0 — 2026-11-06
 - Nouveau mode sombre « ardoise + pastel » : surfaces gris-bleu calmes, traits discrets, ombres plus sombres que le fond, bandeaux pastel adoucis avec texte foncé, meilleure lisibilité.
 - Réglages → Thème : Auto (suit le téléphone/PC), Clair ou Sombre, gardé sur cet appareil.
