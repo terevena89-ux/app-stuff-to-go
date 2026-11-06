@@ -58,6 +58,15 @@
   </header>
   <div class="progression"><span id="progression"></span></div>
   <div id="pastilles" class="pastilles"></div>
+  <!-- Mode modifier : choix de l'affichage (même réglage que dans Réglages) -->
+  <div id="barre-affichage" class="barre-affichage" hidden>
+    <span>Affichage</span>
+    <div class="segments">
+      <button data-affichage="liste">Liste</button>
+      <button data-affichage="cadres">Cadres</button>
+      <button data-affichage="colonnes">2 col.</button>
+    </div>
+  </div>
   <div id="checklist"></div>
   <!-- Ajouter un objet pendant la préparation (juste cette fois, ou aussi dans une liste) -->
   <button id="btn-ajout-ponctuel" class="ligne-ajout"><svg class="ic"><use href="icones/tabler.svg#plus"></use></svg>Ajouter pour cette sortie</button>
@@ -75,7 +84,7 @@
       <select id="ponctuel-liste" aria-label="Liste où garder l'objet"></select>
     </label>
   </form>
-  <div class="pied">
+  <div id="pied-checklist" class="pied">
     <button id="btn-tout-decocher" class="btn large"><svg class="ic"><use href="icones/tabler.svg#refresh"></use></svg>Tout décocher</button>
   </div>
 </section>

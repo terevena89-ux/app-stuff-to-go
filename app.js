@@ -26,7 +26,7 @@ import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.2.0";
+const VERSION = "v1.2.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -364,14 +364,19 @@ function afficherChecklist() {
 
   // « Ajouter pour cette sortie » n'apparaît qu'en mode modifier
   $("btn-ajout-ponctuel").hidden = !modeRanger;
-  // Affichage choisi dans Réglages (sur cet appareil) : liste continue, cadres, ou 2 colonnes
+  // En mode modifier : « Tout décocher » disparaît, et le choix de l'affichage apparaît
+  $("pied-checklist").hidden = modeRanger;
+  $("barre-affichage").hidden = !modeRanger;
+  majBoutonsAffichage();
+  // Affichage choisi (sur cet appareil) : liste continue, cadres, ou 2 colonnes
   $("checklist").className = "aff-" + lireReglage("affichage");
   // Le nom est dans un <span class="txt"> : c'est lui qu'on « barre » (trait animé)
   const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>`;
   // Chaque contenant est rangé dans sa « boîte » (bandeau + objets) : selon l'affichage,
   // la boîte est invisible (liste continue) ou devient un cadre séparé
+  // Contenant dont tout est coché : classe « fini » (bandeau pâli, cadre grisé)
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
-    `<div class="boite">` +
+    `<div class="boite ${!modeRanger && g.objets.every(estPris) ? "fini" : ""}">` +
     bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
     g.objets.map(o => modeRanger
       // Mode modifier : poignée pour glisser, étiquette « Cette fois », croix pour retirer.
@@ -440,7 +445,7 @@ function afficherReglages() {
   // Interrupteurs vibration / son (la ligne vibration est cachée si l'appareil ne sait pas vibrer, ex. PC)
   $("ligne-vibration").hidden = !peutVibrer;
   document.querySelectorAll("[data-feeling]").forEach(b => b.setAttribute("aria-pressed", lireReglage(b.dataset.feeling)));
-  document.querySelectorAll("[data-affichage]").forEach(b => b.setAttribute("aria-pressed", b.dataset.affichage === lireReglage("affichage")));
+  majBoutonsAffichage();
   $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
   $("liste-sacs").innerHTML = contenants().map((c, i) => {
     const ouvert = grilleOuverte === "sac:" + c.id;
@@ -510,12 +515,16 @@ $("reglages-feeling").addEventListener("click", e => {
   aCoche(true);
 });
 
-// Choix de l'affichage de « Check en cours » (liste / cadres / 2 colonnes)
-$("choix-affichage").addEventListener("click", e => {
+// Choix de l'affichage de « Check en cours » (liste / cadres / 2 colonnes) :
+// mêmes boutons dans Réglages et dans Check en cours (mode modifier)
+function majBoutonsAffichage() {
+  document.querySelectorAll("[data-affichage]").forEach(b => b.setAttribute("aria-pressed", b.dataset.affichage === lireReglage("affichage")));
+}
+document.addEventListener("click", e => {
   const b = e.target.closest("[data-affichage]");
   if (!b) return;
   changerReglage("affichage", b.dataset.affichage);
-  afficherReglages();
+  router(); // réaffiche l'écran en cours avec le nouvel affichage
 });
 
 $("btn-deconnexion").addEventListener("click", () => {

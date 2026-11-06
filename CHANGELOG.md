@@ -1,5 +1,10 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.2.1 — 2026-11-06
+- Check en cours, mode modifier : choix de l'affichage (Liste · Cadres · 2 col.) directement sur l'écran ; « Tout décocher » caché.
+- Contenant entièrement coché : bandeau gardé dans sa couleur mais pâli, cadre grisé.
+- 2 colonnes plus compact : marges réduites, texte plus petit, sans icône d'objet.
+
 ## v1.2.0 — 2026-11-06
 - L'écran de préparation s'appelle maintenant « Check en cours ».
 - Nouveau bouton « Modifier » (crayon +) à la place des flèches, sur l'accueil et dans Check en cours. En mode normal on ne fait que cocher ; en mode modifier apparaissent le glisser, les croix pour retirer, « Ajouter pour cette sortie » et l'étiquette « Cette fois » (et sur l'accueil : crayons et « Nouvelle liste »).

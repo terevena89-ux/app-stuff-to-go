@@ -459,7 +459,18 @@ input[type=number] { -moz-appearance: textfield; }
 /* 2 colonnes : les cadres se rangent en deux colonnes, sans se couper en deux */
 .aff-colonnes { columns: 2; column-gap: 10px; }
 .aff-colonnes .boite { break-inside: avoid; margin-bottom: 10px; }
-.aff-colonnes .objet .cocher { gap: 7px; padding-left: 7px; }
+/* 2 colonnes compact (v1.2.1) : petites marges, texte plus petit, pas d'icône d'objet */
+.aff-colonnes { padding: 8px; column-gap: 8px; }
+.aff-colonnes .boite { margin-bottom: 8px; }
+.aff-colonnes .titre-section { padding: 3px 6px; gap: 5px; font-size: 11px; letter-spacing: 0; }
+.aff-colonnes .titre-section .nom { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.aff-colonnes .titre-section .ic { width: 14px; height: 14px; }
+.aff-colonnes .objet .cocher { gap: 6px; padding: 5px 4px 5px 6px; min-height: 34px; font-size: 13px; line-height: 1.2; }
+.aff-colonnes .objet .cocher > .ic { display: none; }
+.aff-colonnes .objet-ranger { gap: 4px; padding: 4px 2px; min-height: 34px; font-size: 13px; }
+.aff-colonnes .objet-ranger > .ic { display: none; }
+.aff-colonnes .objet .retirer { padding: 6px; }
+.aff-colonnes .nom { overflow-wrap: anywhere; }
 .aff-colonnes > p { column-span: all; }
 
 /* Réglages : choix de l'affichage, en 3 boutons collés */
@@ -472,3 +483,20 @@ input[type=number] { -moz-appearance: textfield; }
 }
 .segments button + button { border-left: 2px solid var(--encre); }
 .segments button[aria-pressed="true"] { background: #FAC775; color: #111; }
+
+/* Check en cours, mode modifier : « Tout décocher » caché, choix de l'affichage visible (v1.2.1) */
+.pied[hidden], .barre-affichage[hidden] { display: none; }
+.barre-affichage {
+  display: flex; align-items: center; gap: 10px; padding: 6px 10px;
+  border-bottom: var(--trait) solid var(--encre);
+  font: 700 11px var(--mono); text-transform: uppercase; color: var(--discret);
+}
+.barre-affichage span { flex: 1; }
+
+/* Contenant terminé (tout coché) : bandeau gardé dans sa couleur mais pâli, cadre grisé */
+.boite.fini .titre-section { filter: saturate(.35) opacity(.75); }
+.aff-cadres .boite.fini, .aff-colonnes .boite.fini {
+  border-color: var(--pris);
+  box-shadow: var(--ombre) var(--ombre) 0 var(--pris);
+}
+.boite.fini .titre-section { border-color: var(--pris); }
