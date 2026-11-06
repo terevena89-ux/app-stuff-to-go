@@ -443,3 +443,32 @@ input[type=number] { -moz-appearance: textfield; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation: none !important; transition: none !important; }
 }
+
+/* ---------- Check en cours : 3 affichages (choisis dans Réglages, v1.2) ---------- */
+/* Liste : les boîtes sont invisibles, les contenants se suivent (comme avant) */
+.aff-liste .boite + .boite .titre-section { border-top: var(--trait) solid var(--encre); }
+/* Cadres : chaque contenant devient une petite carte séparée, sur le fond de l'écran */
+.aff-cadres, .aff-colonnes { padding: 10px; background: var(--fond); }
+.aff-cadres { display: grid; gap: 12px; }
+.aff-cadres .boite, .aff-colonnes .boite {
+  background: var(--carte);
+  border: var(--trait) solid var(--encre);
+  box-shadow: var(--ombre) var(--ombre) 0 var(--encre);
+}
+.aff-cadres .boite .objet:last-child, .aff-colonnes .boite .objet:last-child { border-bottom: 0; }
+/* 2 colonnes : les cadres se rangent en deux colonnes, sans se couper en deux */
+.aff-colonnes { columns: 2; column-gap: 10px; }
+.aff-colonnes .boite { break-inside: avoid; margin-bottom: 10px; }
+.aff-colonnes .objet .cocher { gap: 7px; padding-left: 7px; }
+.aff-colonnes > p { column-span: all; }
+
+/* Réglages : choix de l'affichage, en 3 boutons collés */
+.ligne-choix { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-bottom: 1px solid var(--fin); }
+.ligne-choix .nom { flex: 1; min-width: 0; }
+.segments { display: flex; border: var(--trait) solid var(--encre); }
+.segments button {
+  background: var(--carte); border: 0; padding: 5px 8px;
+  font: 700 12px var(--mono); text-transform: uppercase;
+}
+.segments button + button { border-left: 2px solid var(--encre); }
+.segments button[aria-pressed="true"] { background: #FAC775; color: #111; }

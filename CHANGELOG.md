@@ -1,5 +1,10 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.2.0 — 2026-11-06
+- L'écran de préparation s'appelle maintenant « Check en cours ».
+- Nouveau bouton « Modifier » (crayon +) à la place des flèches, sur l'accueil et dans Check en cours. En mode normal on ne fait que cocher ; en mode modifier apparaissent le glisser, les croix pour retirer, « Ajouter pour cette sortie » et l'étiquette « Cette fois » (et sur l'accueil : crayons et « Nouvelle liste »).
+- Check en cours : 3 affichages au choix dans Réglages (sur cet appareil) — Liste (comme avant), Cadres (un cadre séparé par contenant, par défaut) ou 2 colonnes. On peut glisser un objet d'un cadre à l'autre.
+
 ## v1.1.1 — 2026-11-06
 - Glisser pour ranger : la ligne suit vraiment le doigt, pixel par pixel, et les autres lignes s'écartent en douceur pour lui faire la place. En lâchant, elle se pose à sa place.
 - Accueil : petit tic (et clic si le son est activé) en cochant une liste, tic plus marqué sur « Préparer ».

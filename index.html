@@ -35,8 +35,8 @@
   <header class="barre coul-jaune">
     <h1 class="titre">Où vas-tu ?</h1>
     <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
-    <!-- Mode « ranger » : fait apparaître poignées (et crayons sur l'accueil) -->
-    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
+    <!-- Mode « modifier » : fait apparaître poignées, crayons et « Nouvelle liste » -->
+    <button class="btn-icone btn-ranger" data-ranger="modifier" aria-label="Modifier"></button>
     <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
   </header>
   <ul id="liste-listes" class="lignes"></ul>
@@ -51,10 +51,10 @@
 <section id="ecran-checklist" class="ecran" hidden>
   <header class="barre coul-bleu">
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
-    <h1 class="titre">Prêt à partir</h1>
+    <h1 class="titre">Check en cours</h1>
     <span id="compteur" class="compteur"></span>
     <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
-    <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger"></button>
+    <button class="btn-icone btn-ranger" data-ranger="modifier" aria-label="Modifier"></button>
   </header>
   <div class="progression"><span id="progression"></span></div>
   <div id="pastilles" class="pastilles"></div>
@@ -121,6 +121,15 @@
   </form>
 
   <h2 class="section"><span>Ressenti</span><span>CET APPAREIL</span></h2>
+  <!-- Affichage de l'écran « Check en cours » : 3 choix -->
+  <div class="ligne-choix">
+    <span class="nom">Check en cours</span>
+    <div id="choix-affichage" class="segments">
+      <button data-affichage="liste">Liste</button>
+      <button data-affichage="cadres">Cadres</button>
+      <button data-affichage="colonnes">2 col.</button>
+    </div>
+  </div>
   <div id="reglages-feeling">
     <button class="interrupteur" data-feeling="vibration" id="ligne-vibration"><svg class="ic"><use href="icones/tabler.svg#device-mobile-vibration"></use></svg><span class="nom">Vibration</span><span class="bascule"></span></button>
     <button class="interrupteur" data-feeling="son"><svg class="ic"><use href="icones/tabler.svg#volume"></use></svg><span class="nom">Son</span><span class="bascule"></span></button>

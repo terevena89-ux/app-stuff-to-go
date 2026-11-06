@@ -26,7 +26,7 @@ import { aCoche, attrape, lache, lance, toutEstPret, lireReglage, changerReglage
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.1.1";
+const VERSION = "v1.2.0";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -246,13 +246,15 @@ function icone(nom, classe = "") {
 const caseACocher = () => `<span class="case">${icone("check")}</span>`;
 // Poignée (les petits points) : on l'attrape pour faire glisser la ligne
 const poignee = () => `<span class="poignee" aria-label="Déplacer">${icone("grip-vertical")}</span>`;
-// Mode « ranger » : les poignées n'apparaissent que quand on l'active (bouton du bandeau).
+// Mode « ranger / modifier » : poignées (et, sur l'accueil et la checklist, crayons, croix,
+// boutons d'ajout) n'apparaissent que quand on l'active (bouton du bandeau).
 // Il se désactive tout seul quand on change d'écran.
+// Accueil et checklist : bouton « modifier » (crayon + plus) ; ailleurs : « ranger » (flèches).
 let modeRanger = false;
 function majBoutonsRanger() {
   document.querySelectorAll("[data-ranger]").forEach(b => {
     b.classList.toggle("actif", modeRanger);
-    b.innerHTML = modeRanger ? "OK" : icone("arrows-sort");
+    b.innerHTML = modeRanger ? "OK" : icone(b.dataset.ranger === "modifier" ? "pencil-plus" : "arrows-sort");
   });
 }
 // Menu « Partir de zéro / Copier une liste » ouvert ou non sur l'accueil
@@ -302,7 +304,9 @@ function afficherAccueil() {
   }).join("") : `<li class="vide">Crée ta première liste, par exemple « Travail » ou « Piscine ».</li>`;
 
   // Petit menu sous « Nouvelle liste » : partir de zéro, ou copier une liste existante
-  $("choix-nouvelle").innerHTML = choixNouvelleOuvert
+  // « Nouvelle liste » n'apparaît qu'en mode modifier
+  $("btn-nouvelle-liste").hidden = !modeRanger;
+  $("choix-nouvelle").innerHTML = choixNouvelleOuvert && modeRanger
     ? `<button class="ligne-ajout" data-nouvelle="vide">${icone("plus")}Partir de zéro</button>` +
       etat.listes.map(l => `<button class="ligne-ajout" data-nouvelle="${l.id}">${icone("copy")}Copier « ${echapper(l.nom)} »</button>`).join("")
     : "";
@@ -358,21 +362,31 @@ function afficherChecklist() {
   $("compteur").textContent = texteCompteur;
   $("progression").style.width = objets.length ? `${Math.round(pris / objets.length * 100)}%` : "0";
 
-  $("btn-ajout-ponctuel").hidden = modeRanger;
+  // « Ajouter pour cette sortie » n'apparaît qu'en mode modifier
+  $("btn-ajout-ponctuel").hidden = !modeRanger;
+  // Affichage choisi dans Réglages (sur cet appareil) : liste continue, cadres, ou 2 colonnes
+  $("checklist").className = "aff-" + lireReglage("affichage");
   // Le nom est dans un <span class="txt"> : c'est lui qu'on « barre » (trait animé)
-  const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>
-    ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}`;
+  const nomEtQte = o => `<span class="nom"><span class="txt">${echapper(o.nom)}</span>${o.qte > 1 ? ` <span class="qte">×${o.qte}</span>` : ""}</span>`;
+  // Chaque contenant est rangé dans sa « boîte » (bandeau + objets) : selon l'affichage,
+  // la boîte est invisible (liste continue) ou devient un cadre séparé
   $("checklist").innerHTML = grouperParContenant(objets).map(g =>
+    `<div class="boite">` +
     bandeau(g, `${g.objets.filter(estPris).length}/${g.objets.length}`) +
     g.objets.map(o => modeRanger
-      // Mode ranger : ni case ni croix (on ne coche pas par erreur en rangeant)
-      ? `<div class="objet objet-ranger" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}</div>`
+      // Mode modifier : poignée pour glisser, étiquette « Cette fois », croix pour retirer.
+      // Pas de case (on ne coche pas par erreur en modifiant).
+      ? `<div class="objet objet-ranger" data-cle="${echapper(o.cle)}">${poignee()}${icone(o.icone)}${nomEtQte(o)}
+          ${o.ponctuel ? `<span class="etiquette-ponctuel">Cette fois</span>` : ""}
+          <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
+        </div>`
+      // Mode normal : juste cocher
       : `<div class="objet ${estPris(o) ? "coche" : ""} ${o.cle === vientDeCocher ? "vient-coche" : ""}">
           <button class="cocher" data-cocher="${echapper(o.cle)}">${caseACocher()}${icone(o.icone)}${nomEtQte(o)}</button>
-          <button class="btn-icone retirer" data-retirer="${echapper(o.cle)}" aria-label="Retirer pour cette sortie">${icone("x")}</button>
-        </div>`).join("")
+        </div>`).join("") +
+    `</div>`
   ).join("")
-    + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Ajoute un objet ci-dessous, ou avec le crayon sur l'accueil.</p>` : "")
+    + (objets.length === 0 ? `<p class="vide">Rien à prendre pour l'instant. Touche le crayon + en haut pour ajouter un objet.</p>` : "")
     + (objets.length > 0 && pris === objets.length ? `<p class="bravo">Tout est prêt — bonne route</p>` : "");
   vientDeCocher = null; // l'animation de coche ne se joue qu'une fois
 }
@@ -426,6 +440,7 @@ function afficherReglages() {
   // Interrupteurs vibration / son (la ligne vibration est cachée si l'appareil ne sait pas vibrer, ex. PC)
   $("ligne-vibration").hidden = !peutVibrer;
   document.querySelectorAll("[data-feeling]").forEach(b => b.setAttribute("aria-pressed", lireReglage(b.dataset.feeling)));
+  document.querySelectorAll("[data-affichage]").forEach(b => b.setAttribute("aria-pressed", b.dataset.affichage === lireReglage("affichage")));
   $("nb-contenants").textContent = String(contenants().length).padStart(2, "0");
   $("liste-sacs").innerHTML = contenants().map((c, i) => {
     const ouvert = grilleOuverte === "sac:" + c.id;
@@ -493,6 +508,14 @@ $("reglages-feeling").addEventListener("click", e => {
   changerReglage(nom, !lireReglage(nom));
   b.setAttribute("aria-pressed", lireReglage(nom));
   aCoche(true);
+});
+
+// Choix de l'affichage de « Check en cours » (liste / cadres / 2 colonnes)
+$("choix-affichage").addEventListener("click", e => {
+  const b = e.target.closest("[data-affichage]");
+  if (!b) return;
+  changerReglage("affichage", b.dataset.affichage);
+  afficherReglages();
 });
 
 $("btn-deconnexion").addEventListener("click", () => {
@@ -931,7 +954,8 @@ rendreTriable($("checklist"), "[data-cle]", () => {
   const actuels = new Map(fusionner().map(o => [o.cle, o]));
   let sac = null;
   const ordre = [];
-  for (const el of $("checklist").children) {
+  // On lit bandeaux et objets dans l'ordre de l'écran (ils sont rangés dans des « boîtes »)
+  for (const el of $("checklist").querySelectorAll(".titre-section, [data-cle]")) {
     if (el.classList.contains("titre-section")) sac = el.dataset.sac;
     else if (el.dataset.cle) {
       const k = el.dataset.cle;
