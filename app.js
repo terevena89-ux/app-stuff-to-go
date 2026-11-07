@@ -30,7 +30,7 @@ import { METEOS, nomMeteo, SEUILS_DEFAUT, rechercherVille, chargerMeteo, evaluer
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.4.0";
+const VERSION = "v1.4.1";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -220,13 +220,14 @@ let metaSynchro = null;
 function majSynchro(meta) {
   if (meta !== undefined) metaSynchro = meta;
   let etatSynchro = "ok", ic = "cloud-check", texte = "Synchronisé";
-  if (!navigator.onLine) { etatSynchro = "off"; ic = "cloud-off"; texte = "Hors ligne : les changements seront envoyés au retour du réseau"; }
-  else if (metaSynchro && metaSynchro.hasPendingWrites) { etatSynchro = "attente"; ic = "cloud-up"; texte = "En attente d'envoi"; }
-  if (MODE_DEMO) { etatSynchro = "off"; ic = "cloud-off"; texte = "Mode démo : pas de synchro"; }
+  if (!navigator.onLine) { etatSynchro = "off"; ic = "cloud-off"; texte = "Hors ligne"; }
+  else if (metaSynchro && metaSynchro.hasPendingWrites) { etatSynchro = "attente"; ic = "cloud-up"; texte = "En attente"; }
+  if (MODE_DEMO) { etatSynchro = "off"; ic = "cloud-off"; texte = "Aucune (démo)"; }
+  // L'indicateur n'est plus qu'à un endroit : Réglages → Compte
   document.querySelectorAll(".synchro").forEach(el => {
-    el.className = "synchro " + etatSynchro;
-    el.title = texte;
+    el.className = "synchro valeur " + etatSynchro;
     el.querySelector("use").setAttribute("href", PLANCHE + ic);
+    el.querySelector(".synchro-texte").textContent = texte;
   });
 }
 window.addEventListener("online", () => majSynchro());
@@ -240,7 +241,9 @@ let ecranActuel = "";
 let aNavigue = false; // a-t-on changé d'écran depuis l'ouverture ?
 
 function aller(adresse) { aNavigue = true; location.hash = adresse; }
-function retour() { if (aNavigue) history.back(); else location.replace("#"); }
+// Retour : on recule dans l'historique ; si l'appli a été ouverte directement sur cet écran
+// (pas d'historique), on va à l'écran « parent » (l'accueil, ou Réglages pour Mes contenants).
+function retour(parent = "") { if (aNavigue) history.back(); else location.replace("#" + parent); }
 
 function montrer(nom) {
   document.querySelectorAll(".ecran").forEach(e => { e.hidden = e.id !== "ecran-" + nom; });
@@ -760,7 +763,7 @@ const couleurLibre = () => COULEURS.find(k => !contenants().some(c => c.couleur 
 
 // Boutons « Retour » et « Réglages »
 document.querySelectorAll("[data-aller]").forEach(b => b.addEventListener("click", () => {
-  if (b.dataset.aller === "accueil") retour(); else aller(b.dataset.aller);
+  if (b.dataset.aller === "accueil") retour(b.dataset.parent); else aller(b.dataset.aller);
 }));
 
 $("btn-connexion").addEventListener("click", seConnecter);

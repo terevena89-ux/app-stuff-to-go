@@ -132,10 +132,9 @@ body {
 }
 .titre-modifiable:focus { outline: none; border-bottom-style: solid; }
 .compteur { font: 700 15px var(--mono); }
-/* Indicateur de synchro : discret (à moitié transparent) quand tout va bien */
-.synchro { display: flex; opacity: .55; }
-.synchro.attente { opacity: 1; }
-.synchro.off { opacity: 1; }
+/* Indicateur de synchro (Réglages → Compte) : icône + mot, plus marqué si pas synchronisé */
+.synchro { display: flex; align-items: center; gap: 6px; }
+.synchro.ok { opacity: .7; }
 .synchro.off .ic { stroke-width: 2.4; }
 
 /* Barre de progression (checklist) */

@@ -51,7 +51,6 @@
 <section id="ecran-accueil" class="ecran" hidden>
   <header class="barre coul-jaune">
     <h1 class="titre">Où vas-tu ?</h1>
-    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
     <!-- Mode « modifier » : fait apparaître poignées, crayons et « Nouvelle liste » -->
     <button class="btn-icone btn-ranger" data-ranger="modifier" aria-label="Modifier"></button>
     <button class="btn-icone" data-aller="reglages" aria-label="Réglages"><svg class="ic"><use href="icones/tabler.svg#settings"></use></svg></button>
@@ -78,7 +77,6 @@
     <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Check en cours</h1>
     <span id="compteur" class="compteur"></span>
-    <span class="synchro" title="Synchronisation"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg></span>
     <button class="btn-icone btn-ranger" data-ranger="modifier" aria-label="Modifier"></button>
   </header>
   <div class="progression"><span id="progression"></span></div>
@@ -202,6 +200,11 @@
 
   <h2 class="section"><span>Compte</span></h2>
   <p id="compte-info" class="aide"></p>
+  <!-- Indicateur de synchro (rempli par majSynchro dans app.js) : rangé ici, pas en haut des écrans -->
+  <div class="ligne-choix">
+    <span class="nom">Synchro</span>
+    <span class="synchro valeur"><svg class="ic"><use href="icones/tabler.svg#cloud-check"></use></svg><span class="synchro-texte"></span></span>
+  </div>
   <div class="boutons">
     <button id="btn-deconnexion" class="btn"><svg class="ic"><use href="icones/tabler.svg#logout"></use></svg>Se déconnecter</button>
   </div>
@@ -212,7 +215,8 @@
 <!-- ============ ÉCRAN 5 : MES CONTENANTS (ouvert depuis Réglages) ============ -->
 <section id="ecran-contenants" class="ecran" hidden>
   <header class="barre coul-gris">
-    <button class="btn-icone" data-aller="accueil" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
+    <!-- data-parent : écran où revenir si on a ouvert l'appli directement ici (sinon retour normal) -->
+    <button class="btn-icone" data-aller="accueil" data-parent="reglages" aria-label="Retour"><svg class="ic"><use href="icones/tabler.svg#arrow-left"></use></svg></button>
     <h1 class="titre">Mes contenants</h1>
     <button class="btn-icone btn-ranger" data-ranger aria-label="Ranger les sacs"></button>
   </header>

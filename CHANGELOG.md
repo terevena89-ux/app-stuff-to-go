@@ -1,5 +1,10 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.4.1 — 2026-11-07
+- Indicateur de synchro retiré du haut des écrans : il est maintenant dans Réglages → Compte (icône + « Synchronisé », « En attente » ou « Hors ligne »).
+- Mes contenants : si l'appli a été ouverte directement sur cet écran, la flèche retour ramène à Réglages (et plus à l'accueil).
+- Icônes devinées : « Courses » a un sac de courses (au lieu d'un chapeau de diplômé), bonnet / gants / écharpe ont un flocon (au lieu d'un soleil).
+
 ## v1.4.0 — 2026-11-06
 Grosse mise à jour : météo et facultatifs.
 - Accueil en cadres séparés : Météo, Endroits, Toujours proposés.

@@ -21,7 +21,7 @@ export const ICONES_CHOIX = [
   // manger et boire
   "bottle", "cup", "glass", "glass-full", "cookie", "apple",
   // dehors
-  "tent", "bed", "sun", "moon", "bolt", "flame", "map", "map-pin",
+  "tent", "bed", "sun", "snowflake", "moon", "bolt", "flame", "map", "map-pin",
   // contenants
   "hand-grab", "backpack", "briefcase", "luggage", "shirt-sport", "shopping-bag", "basket", "box",
   // endroits et activités
@@ -90,7 +90,9 @@ const REGLES_OBJETS = [
   ["appareil photo|camera", "camera"],
   ["plan|carte", "map"],
   ["pancarte|megaphone", "speakerphone"],
-  ["casquette|chapeau|bonnet", "sun"],
+  // Affaires d'hiver (bonnet, gants...) → flocon ; chapeau / casquette → soleil
+  ["bonnet|gant|echarpe|cache-cou|moufle", "snowflake"],
+  ["casquette|chapeau", "sun"],
   ["jeu de carte|cartes", "cards"],
   ["cadeau", "gift"],
   ["chien|laisse", "dog"],
@@ -100,6 +102,8 @@ const REGLES_OBJETS = [
 ];
 
 const REGLES_LISTES = [
+  // « courses » en premier : sinon il serait pris pour « cours » (école) ou « course » (running)
+  ["courses|magasin|supermarche", "shopping-bag"],
   ["travail|bureau|boulot|taf", "briefcase"],
   ["sport|salle|gym|muscu", "barbell"],
   ["week-end|weekend|nuit", "moon"],
@@ -111,13 +115,12 @@ const REGLES_LISTES = [
   ["balade|rando|marche|promenade", "walk"],
   ["piscine|nage", "swimming"],
   ["plage| mer ", "beach"],
-  ["ecole|cours|fac|etude", "school"],
+  ["ecole| cours |fac|etude", "school"], // « cours » en mot entier : pas « course à pied »
   ["montagne|ski", "mountain"],
   ["velo", "bike"],
   ["course|running|footing", "run"],
   ["maison|famille", "home"],
-  ["camping", "tent"],
-  ["courses|marche|magasin", "shopping-bag"]
+  ["camping", "tent"]
 ];
 
 const REGLES_CONTENANTS = [
