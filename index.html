@@ -140,6 +140,9 @@
   <!-- Les contenants ont leur propre écran (#contenants), pour garder Réglages compact -->
   <button class="ligne-ajout" data-aller="contenants"><svg class="ic"><use href="icones/tabler.svg#backpack"></use></svg>Voir mes contenants<svg class="ic fleche-droite"><use href="icones/tabler.svg#arrow-right"></use></svg></button>
 
+  <h2 class="section"><span>Idées</span></h2>
+  <button class="ligne-ajout" id="ouvrir-notes"><svg class="ic"><use href="icones/tabler.svg#notebook"></use></svg>Notes<svg class="ic fleche-droite"><use href="icones/tabler.svg#arrow-right"></use></svg></button>
+
   <h2 class="section"><span>Météo</span><span>AUTO</span></h2>
   <!-- Ville utilisée pour la météo du jour (on n'utilise jamais le GPS) -->
   <div class="ligne-choix">
@@ -278,6 +281,8 @@
   <button id="toast-annuler">Annuler</button>
 </div>
 
+<script src="champs-mobile.js" defer></script>
+<script src="notes-idees.js" defer></script>
 <script type="module" src="app.js"></script>
 </body>
 </html>

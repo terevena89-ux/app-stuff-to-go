@@ -1,5 +1,10 @@
 # Journal des nouveautés — Stuff to go
 
+## v1.4.2 — 2026-11-09
+- Réglages › Notes : bloc-notes libre pour noter mes idées d'amélioration, synchronisé entre le téléphone et le PC, avec un bouton Copier.
+- Correctif : plus de barre de remplissage automatique (clé / carte / adresse) au-dessus du clavier dans les cases de saisie.
+- Sur téléphone, les listes déroulantes s'ouvrent dans un petit panneau en bas (coche sur le choix actuel, case « Chercher… » au-delà de 10 choix). Sur PC, rien ne change.
+
 ## v1.4.1 — 2026-11-07
 - Indicateur de synchro retiré du haut des écrans : il est maintenant dans Réglages → Compte (icône + « Synchronisé », « En attente » ou « Hors ligne »).
 - Mes contenants : si l'appli a été ouverte directement sur cet écran, la flèche retour ramène à Réglages (et plus à l'accueil).

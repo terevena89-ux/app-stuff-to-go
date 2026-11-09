@@ -630,3 +630,7 @@ input[type=number] { -moz-appearance: textfield; }
 .seuils { display: grid; gap: 6px; padding: 8px 10px; }
 .seuils label { display: flex; align-items: center; gap: 6px; font-size: 13px; }
 .seuils input { width: 64px; height: 32px; font: 700 13px var(--mono); text-align: center; }
+
+/* Petit panneau des listes déroulantes sur téléphone (module champs-mobile.js) :
+   il reprend les couleurs de l'appli, et suit donc le thème clair / sombre. */
+.pm-voile, .ni-ecran { --pm-fond: var(--carte); --pm-texte: var(--encre); --pm-discret: var(--discret); --pm-trait: var(--fin); --pm-accent: var(--encre); --pm-champ: var(--fond); --pm-police: var(--texte); }

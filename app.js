@@ -30,7 +30,7 @@ import { METEOS, nomMeteo, SEUILS_DEFAUT, rechercherVille, chargerMeteo, evaluer
 
 // ---------- 1. Réglages de base et données ----------
 
-const VERSION = "v1.4.1";
+const VERSION = "v1.4.2";
 const NOM_APPLI = "app-stuff-to-go";   // nom du dossier dans Firestore et des fichiers Excel
 
 // Toutes les données de l'appli tiennent dans un seul objet « etat » :
@@ -60,7 +60,8 @@ function etatVide() {
     listes: [], selection: [], coches: [],
     toujours: { objets: [] },
     meteo: { ville: null, seuils: { ...SEUILS_DEFAUT }, jour: "", choix: null },
-    ponctuel: ponctuelVide()
+    ponctuel: ponctuelVide(),
+    idees: ""             // Réglages › Notes : idées d'amélioration (bloc-notes libre)
   };
 }
 
@@ -77,6 +78,7 @@ function normaliser(d) {
     selection: tableau(d.selection),
     coches: tableau(d.coches),
     toujours: { objets: tableau(d.toujours?.objets) },
+    idees: typeof d.idees === "string" ? d.idees : "",
     meteo: {
       ville: m.ville && typeof m.ville.lat === "number" ? m.ville : null,
       seuils: { ...SEUILS_DEFAUT, ...(m.seuils || {}) },
@@ -183,6 +185,7 @@ function demarrerFirebase() {
       const json = enTexte(recu);
       if (json === dernierJSON) return; // rien de neuf (souvent : mon propre enregistrement)
       etat = recu;
+      NotesIdees.maj(etat.idees); // Réglages › Notes : un autre appareil a pu les changer
       dernierJSON = json;
       router();
       majMeteo(); // la ville a pu changer (ou c'est le premier chargement)
@@ -1545,3 +1548,9 @@ $("version").textContent = VERSION;
 // En revenant sur l'appli (elle reste souvent ouverte en arrière-plan), on rafraîchit la météo
 document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") majMeteo(); });
 if (MODE_DEMO) demarrerDemo(); else demarrerFirebase();
+
+// Réglages › Notes : bloc-notes libre pour mes idées d'amélioration (module notes-idees.js).
+// Enregistré avec le reste des données, donc synchronisé entre le téléphone et le PC.
+$("ouvrir-notes").addEventListener("click", () => {
+  NotesIdees.ouvrir(etat.idees, texte => { etat.idees = texte; sauver(); });
+});
